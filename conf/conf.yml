@@ -1,0 +1,10 @@
+server:
+    rtmp:
+        port: 1935
+    httpflv:
+        port: 8080
+    fileflv:
+        save: true
+        path: ./output/live
+    log:
+        path: ./output/log
