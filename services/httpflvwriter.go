@@ -9,7 +9,7 @@ import (
 )
 
 type HttpFlvWriter struct {
-	SessionId string
+	SessionId int64
 	Code      string
 	isStart   bool
 	Writer    http.ResponseWriter

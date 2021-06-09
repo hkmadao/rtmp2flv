@@ -1,8 +1,11 @@
 server:
+    user:
+        name: admin
+        password: admin
     rtmp:
         port: 1935
     httpflv:
-        port: 8080
+        port: 9090
     fileflv:
         save: true
         path: ./output/live

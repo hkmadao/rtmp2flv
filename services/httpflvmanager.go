@@ -14,12 +14,12 @@ func init() {
 
 type HttpFlvManager struct {
 	codecs []av.CodecData
-	Fws    map[string]*HttpFlvWriter
+	Fws    map[int64]*HttpFlvWriter
 }
 
 func NewHttpFlvManager() *HttpFlvManager {
 	hm := &HttpFlvManager{
-		Fws: make(map[string]*HttpFlvWriter),
+		Fws: make(map[int64]*HttpFlvWriter),
 	}
 	return hm
 }
@@ -56,9 +56,9 @@ func (fm *HttpFlvManager) FlvWrite(code string, codecs []av.CodecData, done <-ch
 							continue
 						}
 						fw.errTime = fw.errTime + 1
-					} else {
-						fw.errTime = 0
+						continue
 					}
+					fw.errTime = 0
 					continue
 				}
 				if pkt.IsKeyFrame {

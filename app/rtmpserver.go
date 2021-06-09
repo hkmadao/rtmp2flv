@@ -79,10 +79,12 @@ func HandleConn(conn *rtmp.Conn) {
 		conn.Close()
 		return
 	}
+	camera.OnlineStatus = 1
+	models.CameraUpdate(camera)
 
 	done := make(chan interface{})
-	ffmPktChan := make(chan av.Packet)
-	hfmPktChan := make(chan av.Packet)
+	ffmPktChan := make(chan av.Packet, 10)
+	hfmPktChan := make(chan av.Packet, 10)
 	ffm := services.NewFileFlvManager()
 	hfm := services.NewHttpFlvManager()
 	go ffm.FlvWrite(camera.Code, codecs, done, ffmPktChan)
@@ -95,14 +97,21 @@ func HandleConn(conn *rtmp.Conn) {
 			close(done)
 			break
 		}
-		select {
-		case ffmPktChan <- pkt:
-		case <-time.After(1 * time.Microsecond):
-		}
-		select {
-		case hfmPktChan <- pkt:
-		case <-time.After(1 * time.Microsecond):
-		}
+		writeChan(pkt, ffmPktChan, done)
+		writeChan(pkt, hfmPktChan, done)
 	}
 	conn.Close()
+}
+
+func writeChan(pkt av.Packet, c chan<- av.Packet, done <-chan interface{}) {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("writeChan painc : %v", r)
+		}
+	}()
+	select {
+	case c <- pkt:
+	case <-time.After(1 * time.Millisecond):
+	case <-done:
+	}
 }
