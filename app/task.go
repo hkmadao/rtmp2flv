@@ -5,7 +5,6 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/hkmadao/rtmp2flv/models"
-	"github.com/hkmadao/rtmp2flv/utils"
 )
 
 func ClearToken() {
@@ -29,24 +28,22 @@ func ClearToken() {
 	ClearToken()
 }
 
-func UpdateAuthCode() {
+func DeleteExpiredAuthCode() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("UpdateAuthCode pain : %v", r)
+			logs.Error("DeleteExpiredAuthCode pain : %v", r)
 		}
 	}()
-	cameras, err := models.CameraSelectAll()
+	css, err := models.CameraShareSelectAll()
 	if err != nil {
 		logs.Error("query camera error : %v", err)
 	}
-	for _, camera := range cameras {
-		timeout := utils.TokenTimeOut(camera.AuthCodeTemp, 10080*time.Minute)
+	for _, cs := range css {
+		timeout := time.Now().After(cs.Created.Add(30 * 24 * time.Hour))
 		if timeout {
-			authCodeTemp, _ := utils.NextToke()
-			camera.AuthCodeTemp = authCodeTemp
-			models.CameraUpdate(camera)
+			models.CameraShareDelete(cs)
 		}
 	}
 	<-time.After(10 * time.Minute)
-	UpdateAuthCode()
+	DeleteExpiredAuthCode()
 }

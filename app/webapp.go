@@ -35,10 +35,12 @@ func WebRun() {
 	router.POST("/camera/edit", controllers.CameraEdit)
 	router.POST("/camera/delete/:id", controllers.CameraDelete)
 
+	router.StaticFS("/rtmp2flv", http.Dir("./static"))
+
 	port, err := config.Int("server.httpflv.port")
 	if err != nil {
 		logs.Error("get httpflv port error: %v. \n use default port : 9090", err)
-		port = 8080
+		port = 9090
 	}
 	err = router.Run(":" + strconv.Itoa(port))
 	if err != nil {
@@ -76,7 +78,8 @@ func Cors() gin.HandlerFunc {
 //验证token
 func Validate() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.Request.URL.Path == "/system/login" || strings.HasPrefix(c.Request.URL.Path, "/live/") {
+		if c.Request.URL.Path == "/system/login" || strings.HasPrefix(c.Request.URL.Path, "/live/") ||
+			strings.HasPrefix(c.Request.URL.Path, "/rtmp2flv") {
 			c.Next()
 			return
 		}

@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/gin-gonic/gin"
@@ -48,14 +49,26 @@ func HttpFlvPlay(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, r)
 		return
 	}
-	if method == "temp" && authCode != camera.AuthCodeTemp {
-		logs.Error("AuthCodeTemp error : %s", authCode)
-		r.Code = 0
-		r.Msg = "authCode error"
-		c.JSON(http.StatusBadRequest, r)
-		return
+	if method == "temp" {
+		csq := models.CameraShare{CameraId: camera.Id, AuthCode: authCode}
+		cs, err := models.CameraShareSelectOne(csq)
+		if err != nil {
+			logs.Error("CameraShareSelectOne error : %v", err)
+			r.Code = 0
+			r.Msg = "system error"
+			c.JSON(http.StatusBadRequest, r)
+			return
+		}
+		if time.Now().After(cs.Created.Add(7 * 24 * time.Hour)) {
+			logs.Error("camera [%s] AuthCodeTemp expired : %s", camera.Code, authCode)
+			r.Code = 0
+			r.Msg = "authCode expired"
+			c.JSON(http.StatusBadRequest, r)
+			return
+		}
+
 	}
-	if method == "permanent" && authCode != camera.AuthCodePermanent {
+	if method == "permanent" && authCode != camera.PlayAuthCode {
 		logs.Error("AuthCodePermanent error : %s", authCode)
 		r.Code = 0
 		r.Msg = "authCode error"

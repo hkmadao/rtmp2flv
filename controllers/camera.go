@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"net/http"
-	"strconv"
+	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/gin-gonic/gin"
@@ -43,15 +43,11 @@ func CameraEdit(c *gin.Context) {
 		return
 	}
 
-	enabled, _ := strconv.Atoi(params["enabled"].(string))
-	authCodeTemp, _ := utils.NextToke()
-	authCodePermanent, _ := utils.NextToke()
+	enabled, _ := params["enabled"].(int)
 	q := models.Camera{
-		Code:              params["code"].(string),
-		RtmpAuthCode:      params["rtmpAuthCode"].(string),
-		AuthCodeTemp:      authCodeTemp,
-		AuthCodePermanent: authCodePermanent,
-		Enabled:           enabled,
+		Code:         params["code"].(string),
+		RtmpAuthCode: params["rtmpAuthCode"].(string),
+		Enabled:      enabled,
 	}
 	if params["id"] != nil {
 		q.Id = params["id"].(string)
@@ -74,6 +70,9 @@ func CameraEdit(c *gin.Context) {
 			return
 		}
 		q.Id = id
+		q.Created = time.Now()
+		playAuthCode, _ := utils.NextToke()
+		q.PlayAuthCode = playAuthCode
 		_, err = models.CameraInsert(q)
 		if err != nil {
 			logs.Error("camera insert error : %v", err)

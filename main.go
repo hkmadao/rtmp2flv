@@ -13,6 +13,7 @@ import (
 func main() {
 	go app.StartRtmp()
 	go app.WebRun()
+	go app.ClearToken()
 	sigs := make(chan os.Signal, 1)
 	done := make(chan bool, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)

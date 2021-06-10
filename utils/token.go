@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"strings"
 	"time"
 
 	"github.com/beego/beego/v2/adapter/logs"
@@ -9,13 +10,15 @@ import (
 
 //start with date token
 func NextToke() (string, error) {
-	sessionId := time.Now().Format("20060102150405")
+	timestamp := time.Now().Format("20060102150405")
 	id, err := uuid.NewRandom()
 	if err != nil {
 		logs.Error("Random error : %v", err)
 		return "", err
 	}
-	return sessionId + "-" + id.String(), nil
+	idstring := id.String()
+	idstring = strings.ReplaceAll(idstring, "-", "")
+	return timestamp + "-" + idstring, nil
 }
 
 //validate token

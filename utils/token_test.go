@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +27,7 @@ func TestNextToke(t *testing.T) {
 				return
 			}
 			tokenPrefix := time.Now().Format("20060102150405")
+			fmt.Printf("got : %s\n", got)
 			if !strings.HasPrefix(got, tokenPrefix) {
 				t.Errorf("NextToke() = %v, want %v", got, tt.want)
 			}

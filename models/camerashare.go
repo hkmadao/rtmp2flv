@@ -9,20 +9,18 @@ import (
 
 func init() {
 	// 需要在init中注册定义的model
-	orm.RegisterModel(new(Camera))
+	orm.RegisterModel(new(CameraShare))
 }
 
-type Camera struct {
-	Id           string    `orm:"pk;column(id)" json:"id"`
-	Code         string    `orm:"column(code)" json:"code"`
-	RtmpAuthCode string    `orm:"column(rtmp_auth_code)" json:"rtmpAuthCode"`
-	PlayAuthCode string    `orm:"column(play_auth_code)" json:"playAuthCode"`
-	OnlineStatus int       `orm:"column(online_status)" json:"onlineStatus"`
-	Enabled      int       `orm:"column(enabled)" json:"enabled"`
-	Created      time.Time `orm:"column(created)" json:"created"`
+type CameraShare struct {
+	Id       string    `orm:"pk;column(id)" json:"id"`
+	CameraId string    `orm:"column(camera_id)" json:"cameraId"`
+	AuthCode string    `orm:"column(auth_code)" json:"authCode"`
+	Enabled  int       `orm:"column(enabled)" json:"enabled"`
+	Created  time.Time `orm:"column(created)" json:"created"`
 }
 
-func CameraInsert(e Camera) (i int64, err error) {
+func CameraShareInsert(e CameraShare) (i int64, err error) {
 	o := orm.NewOrm()
 	i, err = o.Insert(&e)
 	if err != nil {
@@ -32,7 +30,7 @@ func CameraInsert(e Camera) (i int64, err error) {
 	return i, nil
 }
 
-func CameraDelete(e Camera) (i int64, err error) {
+func CameraShareDelete(e CameraShare) (i int64, err error) {
 	o := orm.NewOrm()
 	i, err = o.Delete(&e)
 	if err != nil {
@@ -42,7 +40,7 @@ func CameraDelete(e Camera) (i int64, err error) {
 	return i, nil
 }
 
-func CameraUpdate(e Camera) (i int64, err error) {
+func CameraShareUpdate(e CameraShare) (i int64, err error) {
 	o := orm.NewOrm()
 	i, err = o.Update(&e)
 	if err != nil {
@@ -52,9 +50,9 @@ func CameraUpdate(e Camera) (i int64, err error) {
 	return i, nil
 }
 
-func CameraSelectById(id string) (e Camera, err error) {
+func CameraShareSelectById(id string) (e CameraShare, err error) {
 	o := orm.NewOrm()
-	e = Camera{Id: id}
+	e = CameraShare{Id: id}
 
 	err = o.Read(&e)
 
@@ -72,9 +70,9 @@ func CameraSelectById(id string) (e Camera, err error) {
 	}
 }
 
-func CameraSelectOne(q Camera) (e Camera, err error) {
+func CameraShareSelectOne(q CameraShare) (e CameraShare, err error) {
 	o := orm.NewOrm()
-	err = o.QueryTable(new(Camera)).Filter("code", q.Code).One(&e)
+	err = o.QueryTable(new(CameraShare)).Filter("cameraId", q.CameraId).Filter("authCode", q.AuthCode).One(&e)
 	if err != nil {
 		logs.Error("查询出错：%v", err)
 		return e, err
@@ -82,7 +80,7 @@ func CameraSelectOne(q Camera) (e Camera, err error) {
 	return e, nil
 }
 
-func CameraCountByCode(code string) (count int64, err error) {
+func CameraShareCountByCode(code string) (count int64, err error) {
 	o := orm.NewOrm()
 	count, err = o.QueryTable(new(Camera)).Filter("code", code).Count()
 	if err != nil {
@@ -92,7 +90,7 @@ func CameraCountByCode(code string) (count int64, err error) {
 	return count, nil
 }
 
-func CameraSelectAll() (es []Camera, err error) {
+func CameraShareSelectAll() (es []CameraShare, err error) {
 	o := orm.NewOrm()
 	num, err := o.QueryTable(new(Camera)).All(&es)
 	if err != nil {
