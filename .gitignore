@@ -4,6 +4,6 @@ lastupdate.tmp
 rtmp2flv
 output/live/*.flv
 output/log/*.log
-output/rtmp2flv
+output/rtmp2flv*
 .idea
 .vscode
