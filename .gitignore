@@ -2,7 +2,8 @@ __debug_bin
 lastupdate.tmp
 *.exe
 rtmp2flv
-out/live/*.flv
-outt/log/*.log
+output/live/*.flv
+output/log/*.log
+output/releases
 .idea
 .vscode

@@ -13,19 +13,20 @@ func ClearToken() {
 			logs.Error("ClearToken pain : %v", r)
 		}
 	}()
-	deleteTokens := []string{}
-	// 遍历所有sync.Map中的键值对
-	tokens.Range(func(k, v interface{}) bool {
-		if time.Now().After(v.(time.Time).Add(30 * time.Minute)) {
-			deleteTokens = append(deleteTokens, k.(string))
+	for {
+		deleteTokens := []string{}
+		// 遍历所有sync.Map中的键值对
+		tokens.Range(func(k, v interface{}) bool {
+			if time.Now().After(v.(time.Time).Add(30 * time.Minute)) {
+				deleteTokens = append(deleteTokens, k.(string))
+			}
+			return true
+		})
+		for _, v := range deleteTokens {
+			tokens.Delete(v)
 		}
-		return true
-	})
-	for _, v := range deleteTokens {
-		tokens.Delete(v)
+		<-time.After(24 * time.Hour)
 	}
-	<-time.After(24 * time.Hour)
-	ClearToken()
 }
 
 func DeleteExpiredAuthCode() {
@@ -34,16 +35,17 @@ func DeleteExpiredAuthCode() {
 			logs.Error("DeleteExpiredAuthCode pain : %v", r)
 		}
 	}()
-	css, err := models.CameraShareSelectAll()
-	if err != nil {
-		logs.Error("query camera error : %v", err)
-	}
-	for _, cs := range css {
-		timeout := time.Now().After(cs.Created.Add(30 * 24 * time.Hour))
-		if timeout {
-			models.CameraShareDelete(cs)
+	for {
+		css, err := models.CameraShareSelectAll()
+		if err != nil {
+			logs.Error("query camera error : %v", err)
 		}
+		for _, cs := range css {
+			timeout := time.Now().After(cs.Created.Add(30 * 24 * time.Hour))
+			if timeout {
+				models.CameraShareDelete(cs)
+			}
+		}
+		<-time.After(10 * time.Minute)
 	}
-	<-time.After(10 * time.Minute)
-	DeleteExpiredAuthCode()
 }

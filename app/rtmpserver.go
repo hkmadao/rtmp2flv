@@ -41,42 +41,58 @@ func HandleConn(conn *rtmp.Conn) {
 		}
 		return
 	}
-	err := conn.Prepare()
+	r := &RtmpManager{
+		conn: conn,
+	}
+	r.pktTransfer()
+}
+
+type RtmpManager struct {
+	conn       *rtmp.Conn
+	code       string
+	codecs     []av.CodecData
+	done       chan interface{}
+	ffmPktChan chan av.Packet
+	hfmPktChan chan av.Packet
+}
+
+func (r *RtmpManager) pktTransfer() {
+	err := r.conn.Prepare()
 	if err != nil {
 		logs.Error("Prepare error : %v", err)
 		return
 	}
 	//权限验证
-	logs.Info("Path : %s", conn.URL.Path)
-	path := conn.URL.Path
+	logs.Info("Path : %s", r.conn.URL.Path)
+	path := r.conn.URL.Path
 	paths := strings.Split(strings.TrimLeft(path, "/"), "/")
 	if len(paths) != 2 {
 		logs.Error("rtmp path error : %s", path)
-		conn.Close()
+		r.conn.Close()
 		return
 	}
 	q := models.Camera{Code: paths[0]}
 	camera, err := models.CameraSelectOne(q)
 	if err != nil {
 		logs.Error("no camera error : %s", path)
-		conn.Close()
+		r.conn.Close()
 		return
 	}
 	if camera.RtmpAuthCode != paths[1] {
 		logs.Error("RtmpAuthCode error : %s", path)
-		conn.Close()
+		r.conn.Close()
 		return
 	}
 	if camera.Enabled != 1 {
 		logs.Error("camera disabled : %s", path)
-		conn.Close()
+		r.conn.Close()
 		return
 	}
 
-	codecs, err := conn.Streams()
+	codecs, err := r.conn.Streams()
 	if err != nil {
 		logs.Error("get codecs error : %v", err)
-		conn.Close()
+		r.conn.Close()
 		return
 	}
 	camera.OnlineStatus = 1
@@ -85,33 +101,47 @@ func HandleConn(conn *rtmp.Conn) {
 	done := make(chan interface{})
 	ffmPktChan := make(chan av.Packet, 10)
 	hfmPktChan := make(chan av.Packet, 10)
-	ffm := services.NewFileFlvManager()
-	hfm := services.NewHttpFlvManager()
-	go ffm.FlvWrite(camera.Code, codecs, done, ffmPktChan)
-	go hfm.FlvWrite(camera.Code, codecs, done, hfmPktChan)
+
+	r.code = camera.Code
+	r.codecs = codecs
+	r.done = done
+	r.ffmPktChan = ffmPktChan
+	r.hfmPktChan = hfmPktChan
+	r.flvWrite()
 
 	for {
-		pkt, err := conn.ReadPacket()
+		pkt, err := r.conn.ReadPacket()
 		if err != nil {
 			logs.Error("ReadPacket error : %v", err)
 			close(done)
 			break
 		}
-		writeChan(pkt, ffmPktChan, done)
-		writeChan(pkt, hfmPktChan, done)
+		r.writeChan(pkt)
 	}
-	conn.Close()
+	r.conn.Close()
 }
 
-func writeChan(pkt av.Packet, c chan<- av.Packet, done <-chan interface{}) {
+func (r *RtmpManager) flvWrite() {
+	ffm := services.NewFileFlvManager()
+	hfm := services.NewHttpFlvManager()
+	go ffm.FlvWrite(r.code, r.codecs, r.done, r.ffmPktChan)
+	go hfm.FlvWrite(r.code, r.codecs, r.done, r.hfmPktChan)
+}
+
+func (r *RtmpManager) writeChan(pkt av.Packet) {
 	defer func() {
 		if r := recover(); r != nil {
 			logs.Error("writeChan painc : %v", r)
 		}
 	}()
 	select {
-	case c <- pkt:
+	case r.ffmPktChan <- pkt:
 	case <-time.After(1 * time.Millisecond):
-	case <-done:
+	case <-r.done:
+	}
+	select {
+	case r.hfmPktChan <- pkt:
+	case <-time.After(1 * time.Millisecond):
+	case <-r.done:
 	}
 }
