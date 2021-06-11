@@ -122,10 +122,18 @@ func (r *RtmpManager) pktTransfer() {
 }
 
 func (r *RtmpManager) flvWrite() {
-	ffm := services.NewFileFlvManager()
 	hfm := services.NewHttpFlvManager()
-	go ffm.FlvWrite(r.code, r.codecs, r.done, r.ffmPktChan)
 	go hfm.FlvWrite(r.code, r.codecs, r.done, r.hfmPktChan)
+
+	save, err := config.Bool("server.fileflv.save")
+	if err != nil {
+		logs.Error("get server.fileflv.save error : %v", err)
+		return
+	}
+	if save {
+		ffm := services.NewFileFlvManager()
+		go ffm.FlvWrite(r.code, r.codecs, r.done, r.ffmPktChan)
+	}
 }
 
 func (r *RtmpManager) writeChan(pkt av.Packet) {

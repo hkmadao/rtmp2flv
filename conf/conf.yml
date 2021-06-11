@@ -7,7 +7,7 @@ server:
     httpflv:
         port: 9090
     fileflv:
-        save: true
+        save: false
         path: ./output/live
     log:
         path: ./output/log

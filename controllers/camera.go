@@ -33,8 +33,8 @@ func CameraEdit(c *gin.Context) {
 		Code: 1,
 		Msg:  "",
 	}
-	params := make(map[string]interface{})
-	err := c.BindJSON(&params)
+	q := models.Camera{}
+	err := c.BindJSON(&q)
 	if err != nil {
 		logs.Error("param error : %v", err)
 		r.Code = 0
@@ -43,15 +43,6 @@ func CameraEdit(c *gin.Context) {
 		return
 	}
 
-	enabled, _ := params["enabled"].(int)
-	q := models.Camera{
-		Code:         params["code"].(string),
-		RtmpAuthCode: params["rtmpAuthCode"].(string),
-		Enabled:      enabled,
-	}
-	if params["id"] != nil {
-		q.Id = params["id"].(string)
-	}
 	if q.Id == "" || len(q.Id) == 0 {
 		id, _ := utils.NextToke()
 		count, err := models.CameraCountByCode(q.Code)
@@ -99,7 +90,11 @@ func CameraEdit(c *gin.Context) {
 		c.JSON(http.StatusOK, r)
 		return
 	}
-	_, err = models.CameraUpdate(q)
+	camera, _ := models.CameraSelectById(q.Id)
+	camera.Code = q.Code
+	camera.RtmpAuthCode = q.RtmpAuthCode
+	camera.Enabled = q.Enabled
+	_, err = models.CameraUpdate(camera)
 	if err != nil {
 		logs.Error("camera insert error : %v", err)
 		r.Code = 0
