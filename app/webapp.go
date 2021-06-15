@@ -20,7 +20,7 @@ var tokens sync.Map
 func WebRun() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("web pain : %v", r)
+			logs.Error("web panic : %v", r)
 		}
 	}()
 	router := gin.Default()

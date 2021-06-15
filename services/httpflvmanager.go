@@ -1,83 +1,72 @@
 package services
 
 import (
+	"net/http"
+
 	"github.com/beego/beego/v2/adapter/logs"
 	"github.com/deepch/vdk/av"
-	"github.com/deepch/vdk/format/flv"
+	"github.com/hkmadao/rtmp2flv/utils"
 )
 
-var Hms map[string]*HttpFlvManager
+var hfms map[string]*HttpFlvManager
 
 func init() {
-	Hms = make(map[string]*HttpFlvManager)
+	hfms = make(map[string]*HttpFlvManager)
+}
+
+//添加播放者
+func AddHttpFlvPlayer(done <-chan interface{}, code string, writer http.ResponseWriter) <-chan int {
+	heartChan := make(chan int)
+	sessionId := utils.NextValSnowflakeID()
+	fw := &HttpFlvWriter{
+		sessionId: sessionId,
+		writer:    writer,
+		heartChan: heartChan,
+		codecs:    hfms[code].codecs,
+		code:      code,
+	}
+	hfms[code].fms[sessionId] = fw
+	return heartChan
 }
 
 type HttpFlvManager struct {
 	codecs []av.CodecData
-	Fws    map[int64]*HttpFlvWriter
+	fms    map[int64]*HttpFlvWriter
 }
 
 func NewHttpFlvManager() *HttpFlvManager {
-	hm := &HttpFlvManager{
-		Fws: make(map[int64]*HttpFlvWriter),
-	}
+	hm := &HttpFlvManager{}
 	return hm
 }
 
-func (fm *HttpFlvManager) codec(code string, codecs []av.CodecData) {
-	fm.codecs = codecs
-	Hms[code] = fm
+func (hfm *HttpFlvManager) codec(code string, codecs []av.CodecData) {
+	hfm.fms = make(map[int64]*HttpFlvWriter)
+	hfm.codecs = codecs
+	hfms[code] = hfm
 }
 
 //Write extends to writer.Writer
-func (fm *HttpFlvManager) FlvWrite(code string, codecs []av.CodecData, done <-chan interface{}, pchan <-chan av.Packet) {
+func (hfm *HttpFlvManager) FlvWrite(code string, codecs []av.CodecData, done <-chan interface{}, pchan <-chan av.Packet) {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("HttpFlvManager FlvWrite pain %v", r)
+			logs.Error("HttpFlvManager FlvWrite panic %v", r)
 		}
 	}()
-	fm.codec(code, codecs)
+	hfm.codec(code, codecs)
 	for {
 		select {
 		case <-done:
 			return
 		case pkt := <-pchan:
-			for _, fw := range fm.Fws {
-				if fw.close {
-					fw.Done <- nil
-					delete(fm.Fws, fw.SessionId)
-					continue
+			deleteKeys := make([]int64, 2)
+			for _, fw := range hfm.fms {
+				if fw.IsClose() {
+					deleteKeys = append(deleteKeys, fw.sessionId)
 				}
-				if fw.isStart {
-					if err := fw.muxer.WritePacket(pkt); err != nil {
-						logs.Error("writer packet to httpflv error : %v\n", err)
-						if fw.errTime > 20 {
-							fw.close = true
-							continue
-						}
-						fw.errTime = fw.errTime + 1
-						continue
-					}
-					fw.errTime = 0
-					continue
-				}
-				if pkt.IsKeyFrame {
-					muxer := flv.NewMuxer(fw)
-					fw.muxer = muxer
-					err := fw.muxer.WriteHeader(fm.codecs)
-					if err != nil {
-						logs.Error("writer header to httpflv error : %v\n", err)
-						if fw.errTime > 20 {
-							fw.close = true
-							continue
-						}
-						fw.errTime = fw.errTime + 1
-					}
-					fw.isStart = true
-					if err := fw.muxer.WritePacket(pkt); err != nil {
-						logs.Error("writer packet to httpflv error : %v\n", err)
-					}
-				}
+				go fw.HttpWrite(pkt)
+			}
+			for _, sessionId := range deleteKeys {
+				delete(hfm.fms, sessionId)
 			}
 		}
 	}

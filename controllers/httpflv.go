@@ -10,16 +10,10 @@ import (
 	"github.com/hkmadao/rtmp2flv/models"
 	"github.com/hkmadao/rtmp2flv/result"
 	"github.com/hkmadao/rtmp2flv/services"
-	"github.com/hkmadao/rtmp2flv/utils"
 )
 
 func HttpFlvPlay(c *gin.Context) {
 	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	sessionId := utils.NextValSnowflakeID()
-	fw := &services.HttpFlvWriter{
-		SessionId: sessionId,
-		Writer:    c.Writer,
-	}
 	uri := strings.TrimSuffix(strings.TrimLeft(c.Request.RequestURI, "/"), ".flv")
 	uris := strings.Split(uri, "/")
 	if len(uris) < 3 || uris[0] != "live" {
@@ -75,9 +69,21 @@ func HttpFlvPlay(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, r)
 		return
 	}
-	services.Hms[code].Fws[sessionId] = fw
+	//管理员可以主动中断播放
 	done := make(chan interface{})
-	services.Hms[code].Fws[sessionId].Done = done
-	<-done
-	logs.Info("player [%s] session %s exit", code, sessionId)
+	heartChan := services.AddHttpFlvPlayer(done, code, c.Writer)
+Loop:
+	for {
+		select {
+		case heart := <-heartChan:
+			if heart == 1 {
+				continue
+			}
+			break Loop
+		case <-time.After(10 * time.Second):
+			logs.Info("player [%s] session [%s] timeout exit", code, c.Request.RemoteAddr)
+			break Loop
+		}
+	}
+	logs.Info("player [%s] session [%s] exit", code, c.Request.RemoteAddr)
 }

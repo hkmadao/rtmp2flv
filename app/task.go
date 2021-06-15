@@ -10,7 +10,7 @@ import (
 func ClearToken() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("ClearToken pain : %v", r)
+			logs.Error("ClearToken panic : %v", r)
 		}
 	}()
 	for {
@@ -32,7 +32,7 @@ func ClearToken() {
 func DeleteExpiredAuthCode() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("DeleteExpiredAuthCode pain : %v", r)
+			logs.Error("DeleteExpiredAuthCode panic : %v", r)
 		}
 	}()
 	for {

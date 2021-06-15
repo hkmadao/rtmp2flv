@@ -34,7 +34,7 @@ func (fm *FileFlvManager) codec(code string, codecs []av.CodecData) {
 func (fm *FileFlvManager) FlvWrite(code string, codecs []av.CodecData, done <-chan interface{}, pchan <-chan av.Packet) {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("FlvFileManager FlvWrite pain %v", r)
+			logs.Error("FlvFileManager FlvWrite panic %v", r)
 		}
 	}()
 	fm.codec(code, codecs)

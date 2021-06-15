@@ -59,23 +59,33 @@ type RtmpManager struct {
 func (r *RtmpManager) pktTransfer() {
 	err := r.conn.Prepare()
 	if err != nil {
-		logs.Error("Prepare error : %v", err)
+		logs.Error("Prepare error : %v , remote port : %s", err, r.conn.NetConn().RemoteAddr().String())
+		err = r.conn.Close()
+		if err != nil {
+			logs.Error("close conn error : %v", err)
+		}
 		return
 	}
 	//权限验证
-	logs.Info("Path : %s", r.conn.URL.Path)
+	logs.Info("Path : %s , remote port : %s", r.conn.URL.Path, r.conn.NetConn().RemoteAddr().String())
 	path := r.conn.URL.Path
 	paths := strings.Split(strings.TrimLeft(path, "/"), "/")
 	if len(paths) != 2 {
 		logs.Error("rtmp path error : %s", path)
-		r.conn.Close()
+		err = r.conn.Close()
+		if err != nil {
+			logs.Error("close conn error : %v", err)
+		}
 		return
 	}
 	q := models.Camera{Code: paths[0]}
 	camera, err := models.CameraSelectOne(q)
 	if err != nil {
 		logs.Error("no camera error : %s", path)
-		r.conn.Close()
+		err = r.conn.Close()
+		if err != nil {
+			logs.Error("close conn error : %v", err)
+		}
 		return
 	}
 	if camera.RtmpAuthCode != paths[1] {
@@ -85,14 +95,20 @@ func (r *RtmpManager) pktTransfer() {
 	}
 	if camera.Enabled != 1 {
 		logs.Error("camera disabled : %s", path)
-		r.conn.Close()
+		err = r.conn.Close()
+		if err != nil {
+			logs.Error("close conn error : %v", err)
+		}
 		return
 	}
 
 	codecs, err := r.conn.Streams()
 	if err != nil {
 		logs.Error("get codecs error : %v", err)
-		r.conn.Close()
+		err = r.conn.Close()
+		if err != nil {
+			logs.Error("close conn error : %v", err)
+		}
 		return
 	}
 	camera.OnlineStatus = 1
@@ -118,7 +134,10 @@ func (r *RtmpManager) pktTransfer() {
 		}
 		r.writeChan(pkt)
 	}
-	r.conn.Close()
+	err = r.conn.Close()
+	if err != nil {
+		logs.Error("close conn error : %v", err)
+	}
 }
 
 func (r *RtmpManager) flvWrite() {
@@ -139,7 +158,7 @@ func (r *RtmpManager) flvWrite() {
 func (r *RtmpManager) writeChan(pkt av.Packet) {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("writeChan painc : %v", r)
+			logs.Error("writeChan panicc : %v", r)
 		}
 	}()
 	select {
