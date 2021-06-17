@@ -1,23 +1,59 @@
 package app
 
 import (
-	"log"
+	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/beego/beego/v2/core/config"
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
 	"github.com/deepch/vdk/format/rtmp"
+	"github.com/hkmadao/rtmp2flv/controllers"
 	"github.com/hkmadao/rtmp2flv/models"
 	"github.com/hkmadao/rtmp2flv/services"
 )
 
-func StartRtmp() {
+var rms sync.Map
+
+type RtmpServer struct {
+	codeStream <-chan string
+}
+
+func NewRtmpServer() *RtmpServer {
+	codeStream := controllers.CodeStream()
+	rs := &RtmpServer{
+		codeStream: codeStream,
+	}
+	go rs.stopConn()
+	go rs.startRtmp()
+	return rs
+}
+
+func (rs *RtmpServer) stopConn() {
+
+	for {
+		code := <-rs.codeStream
+		v, b := rms.Load(code)
+		if b {
+			r := v.(*RtmpManager)
+			err := r.conn.Close()
+			if err != nil {
+				logs.Error("camera [%s] close error : %v", code, err)
+				return
+			}
+			logs.Info("camera [%s] close success", code)
+		}
+	}
+
+}
+
+func (r *RtmpServer) startRtmp() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("RTMP server panic: ", r)
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
 	rtmpPort, err := config.Int("server.rtmp.port")
@@ -27,12 +63,12 @@ func StartRtmp() {
 	}
 	s := &rtmp.Server{
 		Addr:       ":" + strconv.Itoa(rtmpPort),
-		HandleConn: HandleConn,
+		HandleConn: handleRtmpConn,
 	}
 	s.ListenAndServe()
 }
 
-func HandleConn(conn *rtmp.Conn) {
+func handleRtmpConn(conn *rtmp.Conn) {
 	if r := recover(); r != nil {
 		logs.Error("HandleConn error : %v", r)
 		err := conn.Close()
@@ -41,19 +77,25 @@ func HandleConn(conn *rtmp.Conn) {
 		}
 		return
 	}
+	NewRtmpManager(conn)
+}
+
+type RtmpManager struct {
+	conn         *rtmp.Conn
+	code         string
+	old          bool //是否被挤下线标识
+	codecs       []av.CodecData
+	done         chan interface{} //告知下游goroutine关闭的chan
+	ffmPktStream chan av.Packet
+	hfmPktStream chan av.Packet
+}
+
+func NewRtmpManager(conn *rtmp.Conn) *RtmpManager {
 	r := &RtmpManager{
 		conn: conn,
 	}
 	r.pktTransfer()
-}
-
-type RtmpManager struct {
-	conn       *rtmp.Conn
-	code       string
-	codecs     []av.CodecData
-	done       chan interface{}
-	ffmPktChan chan av.Packet
-	hfmPktChan chan av.Packet
+	return r
 }
 
 func (r *RtmpManager) pktTransfer() {
@@ -111,6 +153,16 @@ func (r *RtmpManager) pktTransfer() {
 		}
 		return
 	}
+	v, b := rms.Load(camera.Code)
+	if b {
+		logs.Info("camera [%s] online , close old conn", camera.Code)
+		oldR := v.(*RtmpManager)
+		oldR.old = true
+		err = oldR.conn.Close()
+		if err != nil {
+			logs.Error("camera [%s] close old conn error : %v", camera.Code, err)
+		}
+	}
 	camera.OnlineStatus = 1
 	models.CameraUpdate(camera)
 
@@ -121,9 +173,11 @@ func (r *RtmpManager) pktTransfer() {
 	r.code = camera.Code
 	r.codecs = codecs
 	r.done = done
-	r.ffmPktChan = ffmPktChan
-	r.hfmPktChan = hfmPktChan
+	r.ffmPktStream = ffmPktChan
+	r.hfmPktStream = hfmPktChan
 	r.flvWrite()
+
+	rms.Store(camera.Code, r)
 
 	for {
 		pkt, err := r.conn.ReadPacket()
@@ -132,17 +186,28 @@ func (r *RtmpManager) pktTransfer() {
 			close(done)
 			break
 		}
-		r.writeChan(pkt)
+		go r.writeChan(r.done, r.ffmPktStream, pkt)
+		go r.writeChan(r.done, r.hfmPktStream, pkt)
 	}
-	err = r.conn.Close()
-	if err != nil {
-		logs.Error("close conn error : %v", err)
+	//正常掉线
+	if !r.old {
+		camera, err = models.CameraSelectOne(q)
+		if err != nil {
+			logs.Error("no camera error : %s", path)
+		}
+		camera.OnlineStatus = 0
+		models.CameraUpdate(camera)
+
+		rms.Delete(r.code)
+		err = r.conn.Close()
+		if err != nil {
+			logs.Error("close conn error : %v", err)
+		}
 	}
 }
 
 func (r *RtmpManager) flvWrite() {
-	hfm := services.NewHttpFlvManager()
-	go hfm.FlvWrite(r.code, r.codecs, r.done, r.hfmPktChan)
+	services.NewHttpFlvManager(r.done, r.ffmPktStream, r.code, r.codecs)
 
 	save, err := config.Bool("server.fileflv.save")
 	if err != nil {
@@ -150,25 +215,20 @@ func (r *RtmpManager) flvWrite() {
 		return
 	}
 	if save {
-		ffm := services.NewFileFlvManager()
-		go ffm.FlvWrite(r.code, r.codecs, r.done, r.ffmPktChan)
+		services.NewFileFlvManager(r.done, r.ffmPktStream, r.code, r.codecs)
 	}
 }
 
-func (r *RtmpManager) writeChan(pkt av.Packet) {
+func (r *RtmpManager) writeChan(done chan interface{}, pktStream chan<- av.Packet, pkt av.Packet) {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("writeChan panicc : %v", r)
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
 	select {
-	case r.ffmPktChan <- pkt:
+	case pktStream <- pkt:
 	case <-time.After(1 * time.Millisecond):
-	case <-r.done:
-	}
-	select {
-	case r.hfmPktChan <- pkt:
-	case <-time.After(1 * time.Millisecond):
-	case <-r.done:
+		logs.Info("lose pkt")
+	case <-done:
 	}
 }

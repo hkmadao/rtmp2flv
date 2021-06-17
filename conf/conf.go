@@ -1,9 +1,9 @@
 package conf
 
 import (
-	"github.com/beego/beego/v2/adapter/logs"
 	"github.com/beego/beego/v2/core/config"
 	_ "github.com/beego/beego/v2/core/config/yaml"
+	"github.com/beego/beego/v2/core/logs"
 )
 
 func init() {

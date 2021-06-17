@@ -2,6 +2,7 @@ package app
 
 import (
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,10 +18,18 @@ import (
 
 var tokens sync.Map
 
-func WebRun() {
+type web struct{}
+
+func NewWeb() *web {
+	w := &web{}
+	go w.webRun()
+	return w
+}
+
+func (w *web) webRun() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("web panic : %v", r)
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
 	router := gin.Default()
@@ -34,10 +43,11 @@ func WebRun() {
 	router.GET("/camera/list", controllers.CameraList)
 	router.POST("/camera/edit", controllers.CameraEdit)
 	router.POST("/camera/delete/:id", controllers.CameraDelete)
+	router.POST("/camera/enabled", controllers.CameraEnabled)
 
 	router.StaticFS("/rtmp2flv", http.Dir("./static"))
 
-	port, err := config.Int("server.httpflv.port")
+	port, err := config.Int("server.http.port")
 	if err != nil {
 		logs.Error("get httpflv port error: %v. \n use default port : 9090", err)
 		port = 9090
@@ -93,6 +103,7 @@ func Validate() gin.HandlerFunc {
 			r.Code = 0
 			r.Msg = "token is null"
 			c.JSON(http.StatusUnauthorized, r)
+			c.Abort()
 			return
 		}
 		tokenTime, b := tokens.Load(token)
@@ -101,6 +112,7 @@ func Validate() gin.HandlerFunc {
 			r.Code = 0
 			r.Msg = "token error"
 			c.JSON(http.StatusUnauthorized, r)
+			c.Abort()
 			return
 		}
 		timeout := time.Now().After(tokenTime.(time.Time).Add(30 * time.Minute))
@@ -109,6 +121,7 @@ func Validate() gin.HandlerFunc {
 			r.Code = 0
 			r.Msg = "token is timeout"
 			c.JSON(http.StatusUnauthorized, r)
+			c.Abort()
 			return
 		}
 		tokens.Store(token, time.Now())
