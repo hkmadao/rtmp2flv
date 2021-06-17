@@ -93,7 +93,7 @@ func CameraEdit(c *gin.Context) {
 	camera, _ := models.CameraSelectById(q.Id)
 	camera.Code = q.Code
 	camera.RtmpAuthCode = q.RtmpAuthCode
-	camera.Enabled = q.Enabled
+	// camera.Enabled = q.Enabled
 	_, err = models.CameraUpdate(camera)
 	if err != nil {
 		logs.Error("camera insert error : %v", err)

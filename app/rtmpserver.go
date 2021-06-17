@@ -186,8 +186,9 @@ func (r *RtmpManager) pktTransfer() {
 			close(done)
 			break
 		}
-		go r.writeChan(r.done, r.ffmPktStream, pkt)
-		go r.writeChan(r.done, r.hfmPktStream, pkt)
+		//不能开goroutine,不能保证包的顺序
+		r.writeChan(r.done, r.ffmPktStream, pkt)
+		r.writeChan(r.done, r.hfmPktStream, pkt)
 	}
 	//正常掉线
 	if !r.old {
@@ -207,7 +208,7 @@ func (r *RtmpManager) pktTransfer() {
 }
 
 func (r *RtmpManager) flvWrite() {
-	services.NewHttpFlvManager(r.done, r.ffmPktStream, r.code, r.codecs)
+	services.NewHttpFlvManager(r.done, r.hfmPktStream, r.code, r.codecs)
 
 	save, err := config.Bool("server.fileflv.save")
 	if err != nil {
@@ -228,7 +229,7 @@ func (r *RtmpManager) writeChan(done chan interface{}, pktStream chan<- av.Packe
 	select {
 	case pktStream <- pkt:
 	case <-time.After(1 * time.Millisecond):
-		logs.Info("lose pkt")
+		// logs.Info("lose pkt")
 	case <-done:
 	}
 }

@@ -3,6 +3,7 @@ package services
 import (
 	"net/http"
 	"runtime/debug"
+	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
@@ -83,16 +84,19 @@ func (hfw *HttpFlvWriter) httpWrite() {
 					close(hfw.endStream)
 					return
 				}
-				logs.Info("start send heartbeat ")
+				// logs.Info("start send heartbeat ")
 				select {
 				case hfw.heartbeatStream <- 1:
-					logs.Info("send heartbeat sucessful")
+					// logs.Info("send heartbeat sucessful")
 					continue
 				case <-hfw.done:
 					continue
 				case <-hfw.playerDone:
 					continue
+				case <-time.After(1 * time.Millisecond):
+					logs.Info("send heartbeat time out")
 				}
+				continue
 			}
 			if pkt.IsKeyFrame {
 				muxer := flv.NewMuxer(hfw)
@@ -109,16 +113,19 @@ func (hfw *HttpFlvWriter) httpWrite() {
 					close(hfw.endStream)
 					return
 				}
-				logs.Info("start send heartbeat ")
+				// logs.Info("start send heartbeat ")
 				select {
 				case hfw.heartbeatStream <- 1:
-					logs.Info("send heartbeat sucessful")
+					// logs.Info("send heartbeat sucessful")
 					continue
 				case <-hfw.done:
 					continue
 				case <-hfw.playerDone:
 					continue
+				case <-time.After(1 * time.Millisecond):
+					logs.Info("send heartbeat time out")
 				}
+				continue
 			}
 		}
 	}

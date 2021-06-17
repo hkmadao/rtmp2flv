@@ -32,9 +32,9 @@ func AddHttpFlvPlayer(code string, writer http.ResponseWriter) (endStream <-chan
 	sessionId := utils.NextValSnowflakeID()
 	hfm := v.(*HttpFlvManager)
 	hfw := NewHttpFlvWriter(hfm.done, hfm.code, hfm.codecs, writer, sessionId)
-	//one2two chan
-	heartbeatStream1, heartbeatStream2 := utils.Tee(hfm.done, hfw.GetHeartbeatStream())
 	endStream = hfw.GetEndStream()
+	//one2two chan
+	heartbeatStream1, heartbeatStream2 := utils.Tee(endStream, hfw.GetHeartbeatStream(), 1*time.Millisecond)
 	wi := &writerInfo{
 		sessionId:       sessionId,
 		code:            code,
@@ -58,7 +58,8 @@ func monitor(wi *writerInfo) {
 	for {
 		select {
 		case <-wi.heartbeatStream:
-			return
+			logs.Info("heartbeat")
+			continue
 		case <-wi.endStream:
 			//end info
 			if v, b := hfms.Load(wi.code); b {
@@ -119,7 +120,7 @@ func (hfm *HttpFlvManager) flvWrite() {
 				select {
 				case wi.pktStream <- pkt:
 				case <-time.After(1 * time.Millisecond):
-					logs.Info("lose pkt")
+					// logs.Info("lose pkt")
 				}
 				return true
 			})

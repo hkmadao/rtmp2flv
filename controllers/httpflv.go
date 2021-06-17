@@ -99,6 +99,7 @@ Loop:
 		case <-endStream:
 			break Loop
 		case <-heartbeatStream:
+			logs.Info("heartbeat")
 			continue
 		case <-time.After(10 * time.Second):
 			logs.Info("player [%s] addr [%s] timeout exit", code, c.Request.RemoteAddr)
