@@ -4,7 +4,7 @@ server:
         password: admin
     rtmp:
         port: 1935
-    httpflv:
+    http:
         port: 9090
     fileflv:
         save: false

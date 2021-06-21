@@ -1,7 +1,7 @@
 __debug_bin
 lastupdate.tmp
 *.exe
-rtmp2flv
+rtmp2flv*
 output/live/*.flv
 output/log/*.log
 output/rtmp2flv*

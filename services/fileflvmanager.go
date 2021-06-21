@@ -1,87 +1,35 @@
 package services
 
 import (
-	"os"
-	"time"
+	"runtime/debug"
 
-	"github.com/beego/beego/v2/adapter/logs"
-	"github.com/beego/beego/v2/core/config"
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
-	"github.com/deepch/vdk/format/flv"
 )
 
 type FileFlvManager struct {
-	fw *FileFlvWriter
+	done      <-chan interface{}
+	pktStream <-chan av.Packet
+	code      string
+	codecs    []av.CodecData
 }
 
-func NewFileFlvManager() *FileFlvManager {
-	return &FileFlvManager{}
-}
-
-func (fm *FileFlvManager) codec(code string, codecs []av.CodecData) {
-	fd, err := os.OpenFile(getFileFlvPath()+"/"+code+"_"+time.Now().Format("20060102150405")+".flv", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	if err != nil {
-		logs.Error("open file error :", err)
+func NewFileFlvManager(done <-chan interface{}, pktStream <-chan av.Packet, code string, codecs []av.CodecData) *FileFlvManager {
+	ffm := &FileFlvManager{
+		done:      done,
+		pktStream: pktStream,
+		code:      code,
+		codecs:    codecs,
 	}
-	fm.fw = &FileFlvWriter{
-		codecs: codecs,
-		code:   code,
-		fd:     fd,
-	}
+	go ffm.flvWrite()
+	return ffm
 }
 
-//Write extends to writer.Writer
-func (fm *FileFlvManager) FlvWrite(code string, codecs []av.CodecData, done <-chan interface{}, pchan <-chan av.Packet) {
+func (ffm *FileFlvManager) flvWrite() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("FlvFileManager FlvWrite panic %v", r)
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
-	fm.codec(code, codecs)
-	muxer := flv.NewMuxer(fm.fw)
-	ticker := time.NewTicker(1 * time.Hour)
-	for {
-		select {
-		case <-done:
-			fm.fw.fd.Close()
-			return
-		case <-ticker.C: //split flvFile
-			fd, err := os.OpenFile(getFileFlvPath()+"/"+fm.fw.code+"_"+time.Now().Format("20060102150405")+".flv", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-			if err != nil {
-				logs.Error("open file error :", err)
-			}
-			fdOld := fm.fw.fd
-			fm.fw.prepare = true
-			fm.fw.isStart = false
-			fm.fw.fd = fd
-			fm.fw.prepare = false
-			fdOld.Close()
-		case pkt := <-pchan:
-			if fm.fw.isStart {
-				if err := muxer.WritePacket(pkt); err != nil {
-					logs.Error("writer packet to flv file error : %v\n", err)
-				}
-				continue
-			}
-			if pkt.IsKeyFrame {
-				err := muxer.WriteHeader(fm.fw.codecs)
-				if err != nil {
-					logs.Error("writer header to flv file error : %v\n", err)
-				}
-				if err := muxer.WritePacket(pkt); err != nil {
-					logs.Error("writer packet to flv file error : %v\n", err)
-				}
-				fm.fw.isStart = true
-			}
-		}
-	}
-}
-
-func getFileFlvPath() string {
-	fileFlvPath, err := config.String("server.fileflv.path")
-	if err != nil {
-		logs.Error("get fileflv path error :", err)
-		return ""
-	}
-	return fileFlvPath
+	NewFileFlvWriter(ffm.done, ffm.pktStream, ffm.code, ffm.codecs)
 }

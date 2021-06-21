@@ -93,7 +93,7 @@ func CameraEdit(c *gin.Context) {
 	camera, _ := models.CameraSelectById(q.Id)
 	camera.Code = q.Code
 	camera.RtmpAuthCode = q.RtmpAuthCode
-	camera.Enabled = q.Enabled
+	// camera.Enabled = q.Enabled
 	_, err = models.CameraUpdate(camera)
 	if err != nil {
 		logs.Error("camera insert error : %v", err)
@@ -125,5 +125,58 @@ func CameraDelete(c *gin.Context) {
 		c.JSON(http.StatusOK, r)
 		return
 	}
+	//close camera conn
+	select {
+	case codeStream <- camera.Code:
+	case <-time.After(1 * time.Second):
+	}
+
 	c.JSON(http.StatusOK, r)
+}
+
+func CameraEnabled(c *gin.Context) {
+	c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+	r := result.Result{Code: 1, Msg: ""}
+	q := models.Camera{}
+	err := c.BindJSON(&q)
+	if err != nil {
+		logs.Error("param error : %v", err)
+		r.Code = 0
+		r.Msg = "param error"
+		c.JSON(http.StatusOK, r)
+		return
+	}
+
+	camera, err := models.CameraSelectById(q.Id)
+	if err != nil {
+		logs.Error("query camera error : %v", err)
+		r.Code = 0
+		r.Msg = "query camera error"
+		c.JSON(http.StatusOK, r)
+		return
+	}
+	camera.Enabled = q.Enabled
+	_, err = models.CameraUpdate(camera)
+	if err != nil {
+		logs.Error("enabled camera status %d error : %v", camera.Enabled, err)
+		r.Code = 0
+		r.Msg = "enabled camera status %d error"
+		c.JSON(http.StatusOK, r)
+		return
+	}
+	if q.Enabled != 1 {
+		//close camera conn
+		select {
+		case codeStream <- camera.Code:
+		case <-time.After(1 * time.Second):
+		}
+	}
+
+	c.JSON(http.StatusOK, r)
+}
+
+var codeStream = make(chan string)
+
+func CodeStream() <-chan string {
+	return codeStream
 }

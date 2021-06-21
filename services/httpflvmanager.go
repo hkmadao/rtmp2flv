@@ -1,73 +1,129 @@
 package services
 
 import (
+	"errors"
 	"net/http"
+	"runtime/debug"
+	"sync"
+	"time"
 
-	"github.com/beego/beego/v2/adapter/logs"
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
 	"github.com/hkmadao/rtmp2flv/utils"
 )
 
-var hfms map[string]*HttpFlvManager
+var hfms sync.Map
 
-func init() {
-	hfms = make(map[string]*HttpFlvManager)
+type writerInfo struct {
+	sessionId       int64
+	code            string
+	heartbeatStream <-chan interface{}
+	endStream       <-chan interface{}
+	pktStream       chan<- av.Packet
 }
 
 //添加播放者
-func AddHttpFlvPlayer(done <-chan interface{}, code string, writer http.ResponseWriter) <-chan int {
-	heartChan := make(chan int)
-	sessionId := utils.NextValSnowflakeID()
-	fw := &HttpFlvWriter{
-		sessionId: sessionId,
-		writer:    writer,
-		heartChan: heartChan,
-		codecs:    hfms[code].codecs,
-		code:      code,
+func AddHttpFlvPlayer(code string, writer http.ResponseWriter) (endStream <-chan interface{}, heartbeatStream <-chan interface{}, playerDone chan<- interface{}, err error) {
+	v, b := hfms.Load(code)
+	if !b {
+		err = errors.New("camera no connection")
+		return
 	}
-	hfms[code].fms[sessionId] = fw
-	return heartChan
+	sessionId := utils.NextValSnowflakeID()
+	hfm := v.(*HttpFlvManager)
+	hfw := NewHttpFlvWriter(hfm.done, hfm.code, hfm.codecs, writer, sessionId)
+	endStream = hfw.GetEndStream()
+	//one2two chan
+	heartbeatStream1, heartbeatStream2 := utils.Tee(endStream, hfw.GetHeartbeatStream(), 1*time.Millisecond)
+	wi := &writerInfo{
+		sessionId:       sessionId,
+		code:            code,
+		heartbeatStream: heartbeatStream1,
+		endStream:       endStream,
+		pktStream:       hfw.GetPktStream(),
+	}
+	hfm.wis.Store(sessionId, wi)
+	heartbeatStream = heartbeatStream2
+	playerDone = hfw.GetPlayerDone()
+	go monitor(wi)
+	return
+}
+
+func monitor(wi *writerInfo) {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
+		}
+	}()
+	for {
+		select {
+		case <-wi.heartbeatStream:
+			logs.Info("heartbeat")
+			continue
+		case <-wi.endStream:
+			//end info
+			if v, b := hfms.Load(wi.code); b {
+				hfm := v.(*HttpFlvManager)
+				hfm.wis.Delete(wi.sessionId)
+			}
+			return
+		case <-time.After(10 * time.Second):
+			//time out
+			if v, b := hfms.Load(wi.code); b {
+				hfm := v.(*HttpFlvManager)
+				hfm.wis.Delete(wi.sessionId)
+			}
+			return
+		}
+	}
+}
+
+func ExistsHttpFlvManager(code string) bool {
+	_, b := hfms.Load(code)
+	return b
 }
 
 type HttpFlvManager struct {
-	codecs []av.CodecData
-	fms    map[int64]*HttpFlvWriter
+	done      <-chan interface{}
+	pktStream <-chan av.Packet
+	code      string
+	codecs    []av.CodecData
+	wis       sync.Map
 }
 
-func NewHttpFlvManager() *HttpFlvManager {
-	hm := &HttpFlvManager{}
-	return hm
-}
-
-func (hfm *HttpFlvManager) codec(code string, codecs []av.CodecData) {
-	hfm.fms = make(map[int64]*HttpFlvWriter)
-	hfm.codecs = codecs
-	hfms[code] = hfm
+func NewHttpFlvManager(done <-chan interface{}, pktStream <-chan av.Packet, code string, codecs []av.CodecData) *HttpFlvManager {
+	hfm := &HttpFlvManager{
+		done:      done,
+		pktStream: pktStream,
+		code:      code,
+		codecs:    codecs,
+	}
+	go hfm.flvWrite()
+	hfms.Store(code, hfm)
+	return hfm
 }
 
 //Write extends to writer.Writer
-func (hfm *HttpFlvManager) FlvWrite(code string, codecs []av.CodecData, done <-chan interface{}, pchan <-chan av.Packet) {
+func (hfm *HttpFlvManager) flvWrite() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("HttpFlvManager FlvWrite panic %v", r)
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
-	hfm.codec(code, codecs)
 	for {
 		select {
-		case <-done:
+		case <-hfm.done:
 			return
-		case pkt := <-pchan:
-			deleteKeys := make([]int64, 2)
-			for _, fw := range hfm.fms {
-				if fw.IsClose() {
-					deleteKeys = append(deleteKeys, fw.sessionId)
+		case pkt := <-hfm.pktStream:
+			hfm.wis.Range(func(key, value interface{}) bool {
+				wi := value.(*writerInfo)
+				select {
+				case wi.pktStream <- pkt:
+				case <-time.After(1 * time.Millisecond):
+					// logs.Info("lose pkt")
 				}
-				go fw.HttpWrite(pkt)
-			}
-			for _, sessionId := range deleteKeys {
-				delete(hfm.fms, sessionId)
-			}
+				return true
+			})
 		}
 	}
 }

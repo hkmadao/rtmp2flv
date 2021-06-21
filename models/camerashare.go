@@ -3,8 +3,8 @@ package models
 import (
 	"time"
 
-	"github.com/beego/beego/v2/adapter/logs"
 	"github.com/beego/beego/v2/client/orm"
+	"github.com/beego/beego/v2/core/logs"
 )
 
 func init() {

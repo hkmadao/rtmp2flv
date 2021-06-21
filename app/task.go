@@ -1,16 +1,28 @@
 package app
 
 import (
+	"runtime/debug"
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/hkmadao/rtmp2flv/models"
 )
 
-func ClearToken() {
+type task struct {
+}
+
+func NewTask() *task {
+	t := &task{}
+	go t.clearToken()
+	go t.deleteExpiredAuthCode()
+	go t.offlineCamera()
+	return t
+}
+
+func (t *task) clearToken() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("ClearToken panic : %v", r)
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
 	for {
@@ -29,21 +41,57 @@ func ClearToken() {
 	}
 }
 
-func DeleteExpiredAuthCode() {
+func (t *task) deleteExpiredAuthCode() {
 	defer func() {
 		if r := recover(); r != nil {
-			logs.Error("DeleteExpiredAuthCode panic : %v", r)
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
 	for {
 		css, err := models.CameraShareSelectAll()
 		if err != nil {
-			logs.Error("query camera error : %v", err)
+			logs.Error("query CameraShare error : %v", err)
 		}
 		for _, cs := range css {
 			timeout := time.Now().After(cs.Created.Add(30 * 24 * time.Hour))
 			if timeout {
 				models.CameraShareDelete(cs)
+			}
+		}
+		<-time.After(10 * time.Minute)
+	}
+}
+
+func (t *task) offlineCamera() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
+		}
+	}()
+	for {
+		css, err := models.CameraSelectAll()
+		if err != nil {
+			logs.Error("query camera error : %v", err)
+		}
+		exist := false
+		for _, cs := range css {
+			if cs.OnlineStatus != 1 {
+				continue
+			}
+			rms.Range(func(key, value interface{}) bool {
+				code := key.(string)
+				if code == cs.Code {
+					// r := value.(*RtmpManager)
+					// if r.stop {
+					// 	return true
+					// }
+					exist = true
+				}
+				return true
+			})
+			if !exist {
+				cs.OnlineStatus = 0
+				models.CameraUpdate(cs)
 			}
 		}
 		<-time.After(10 * time.Minute)
