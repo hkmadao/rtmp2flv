@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.js": "/rtmp2flv/static/js/main.d80fa9a5.chunk.js",
+    "main.js.map": "/rtmp2flv/static/js/main.d80fa9a5.chunk.js.map",
+    "runtime-main.js": "/rtmp2flv/static/js/runtime-main.ac59930b.js",
+    "runtime-main.js.map": "/rtmp2flv/static/js/runtime-main.ac59930b.js.map",
+    "static/js/2.5d248c6b.chunk.js": "/rtmp2flv/static/js/2.5d248c6b.chunk.js",
+    "static/js/2.5d248c6b.chunk.js.map": "/rtmp2flv/static/js/2.5d248c6b.chunk.js.map",
+    "index.html": "/rtmp2flv/index.html",
+    "static/js/2.5d248c6b.chunk.js.LICENSE.txt": "/rtmp2flv/static/js/2.5d248c6b.chunk.js.LICENSE.txt"
+  },
+  "entrypoints": [
+    "static/js/runtime-main.ac59930b.js",
+    "static/js/2.5d248c6b.chunk.js",
+    "static/js/main.d80fa9a5.chunk.js"
+  ]
+}

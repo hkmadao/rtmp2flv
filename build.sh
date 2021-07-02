@@ -1,53 +1,42 @@
-#/bin/bash
+#!/bin/bash
+#./build.sh 0.0.1
 ver=$1
-if [ -n "${ver}" ] 
-then
-    echo package version ${ver}
+if [ -n "${ver}" ]; then
+    echo package version "${ver}"
 else
     echo no version param
     exit 1
 fi
-# Linux
-# export GOOS=linux
-# export GOARCH=amd64
-export CGO_ENABLED=1
-go build -o rtmp2flv_${ver}_linux_amd64 main.go
+#打多个平台的包 
+platforms="windows_amd64 linux_amd64 linux_arm"
+for platform in $platforms; do
 
-# Windows
-# export GOOS=windows
-# export GOARCH=amd64
-# export CGO_ENABLED=1
-# go build -o rtmp2flv.exe main.go
+    rm -rf ./resources/output/rtmp2flv_"${ver}"_linux_amd64
 
-#package linux_amd64
-rm -rf ./output/rtmp2flv_${ver}_linux_amd64
+    export GOOS=$(echo "$platform" | gawk 'BEGIN{FS="_"} {print $1}')
+    export GOARCH=$(echo "$platform" | gawk 'BEGIN{FS="_"} {print $2}')
+    export CGO_ENABLED=0
+    echo "${GOOS}"_"${GOARCH}"
+    if [[ "${GOOS}" == "windows" ]]
+    then
+        go build -o ./resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv.exe main.go
+    else
+        go build -o ./resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv main.go
+    fi
+    go build -o ./resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv main.go
 
-mkdir -p ./output/rtmp2flv_${ver}_linux_amd64/output/live
-mkdir -p ./output/rtmp2flv_${ver}_linux_amd64/output/log
-mkdir -p ./output/rtmp2flv_${ver}_linux_amd64/conf
+    mkdir -p ./resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/output/live
+    mkdir -p ./resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/output/log
+    mkdir -p ./resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/conf
 
-cp -r ./static ./output/rtmp2flv_${ver}_linux_amd64/static/
-cp -r ./db ./output/rtmp2flv_${ver}_linux_amd64/db/
-cp -r ./conf/conf.yml ./output/rtmp2flv_${ver}_linux_amd64/conf
-cp -r ./rtmp2flv_${ver}_linux_amd64 ./output/rtmp2flv_${ver}_linux_amd64/rtmp2flv
+    cp -r ./resources/static ./resources/resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/static/
+    cp -r ./resources/db ./resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/db/
+    cp -r ./resources/conf ./resources/output/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/conf
 
-#package window_amd64
-rm -rf ./output/rtmp2flv_${ver}_window_amd64
+    cd ./resources/output/ || exit
+    rm -rf rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}".tar.gz
+    tar -zcvf ./rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}".tar.gz ./rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/
 
-mkdir -p ./output/rtmp2flv_${ver}_window_amd64/output/live
-mkdir -p ./output/rtmp2flv_${ver}_window_amd64/output/log
-mkdir -p ./output/rtmp2flv_${ver}_window_amd64/conf
-
-cp -r ./static ./output/rtmp2flv_${ver}_window_amd64/static/
-cp -r ./db ./output/rtmp2flv_${ver}_window_amd64/db/
-cp -r ./conf/conf.yml ./output/rtmp2flv_${ver}_window_amd64/conf
-cp -r ./rtmp2flv_${ver}_window_amd64.exe ./output/rtmp2flv_${ver}_window_amd64/rtmp2flv.exe
-cp -r ./start.vbs ./output/rtmp2flv_${ver}_window_amd64/start.vbs
-
-cd ./output/
-rm -rf rtmp2flv_*.tar.gz
-tar -zcvf ./rtmp2flv_${ver}_linux_amd64.tar.gz ./rtmp2flv_${ver}_linux_amd64/
-tar -zcvf ./rtmp2flv_${ver}_window_amd64.tar.gz ./rtmp2flv_${ver}_window_amd64/
-
-rm -rf ./rtmp2flv_${ver}_linux_amd64/
-rm -rf ./rtmp2flv_${ver}_window_amd64/
+    rm -rf ./rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/
+    cd ../
+done

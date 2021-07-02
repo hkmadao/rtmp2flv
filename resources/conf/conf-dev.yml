@@ -1,0 +1,20 @@
+server:
+    user:
+        name: admin
+        password: admin
+    rtmp:
+        port: 1935
+    http:
+        port: 9090
+        static:
+            path: ./resources/static
+    fileflv:
+        path: ./resources/output/live
+    log:
+        path: ./resources/output/log
+        level: 6 #1-7 7输出的信息最多
+    database:
+        driver: postgres
+        url: user=postgres password=123456 dbname=rtmp2flv host=localhost port=5432 sslmode=disable
+        show-sql: false
+        
