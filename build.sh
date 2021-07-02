@@ -28,7 +28,6 @@ for platform in $platforms; do
     mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/conf
 
     cp -r ./resources/static ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/static/
-    cp -r ./resources/db ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/db/
     cp -r ./resources/conf ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/conf
 
     cd ./resources/output/releases/ || exit

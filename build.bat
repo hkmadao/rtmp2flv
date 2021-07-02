@@ -16,7 +16,6 @@ md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\output\log
 md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\conf
 
 xcopy /S /Y /E .\resources\static .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\static\
-xcopy /S /Y /E .\resources\db .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\db\
 xcopy /S /Y /E .\resources\conf .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\conf
 cd .\resources\output\releases\
 7z a -ttar -so rtmp2flv_%ver%_%GOOS%_%GOARCH%.tar rtmp2flv_%ver%_%GOOS%_%GOARCH%/ | 7z a -si rtmp2flv_%ver%_%GOOS%_%GOARCH%.tar.gz
