@@ -14,10 +14,14 @@ func init() {
 		logs.Error("database driver param is null")
 		return
 	}
-
 	url, err := config.String("server.database.url")
 	if err != nil {
 		logs.Error("database url param is null")
+		return
+	}
+	driveType, err := config.Int("server.database.driver-type")
+	if err != nil {
+		logs.Error("database driver-type param is null")
 		return
 	}
 	showSql, err := config.Bool("server.database.show-sql")
@@ -28,8 +32,8 @@ func init() {
 		orm.Debug = showSql
 	}
 	logs.Info("user database %v", driver)
-	orm.RegisterDriver("postgres", orm.DRPostgres)
-	orm.RegisterDataBase("default", "postgres", url)
+	orm.RegisterDriver(driver, orm.DriverType(driveType))
+	orm.RegisterDataBase("default", driver, url)
 }
 
 func init() {
