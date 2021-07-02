@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -125,43 +126,43 @@ func Cors() gin.HandlerFunc {
 //验证token
 func Validate() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// if c.Request.URL.Path == "/system/login" || strings.HasPrefix(c.Request.URL.Path, "/live/") ||
-		// 	strings.HasPrefix(c.Request.URL.Path, "/rtmp2flv") {
-		// 	c.Next()
-		// 	return
-		// }
-		// r := result.Result{
-		// 	Code: 1,
-		// 	Msg:  "",
-		// }
-		// token := c.Request.Header.Get("token")
-		// if len(token) == 0 {
-		// 	logs.Error("token is null")
-		// 	r.Code = 0
-		// 	r.Msg = "token is null"
-		// 	c.JSON(http.StatusUnauthorized, r)
-		// 	c.Abort()
-		// 	return
-		// }
-		// tokenTime, b := tokens.Load(token)
-		// if !b {
-		// 	logs.Error("token error")
-		// 	r.Code = 0
-		// 	r.Msg = "token error"
-		// 	c.JSON(http.StatusUnauthorized, r)
-		// 	c.Abort()
-		// 	return
-		// }
-		// timeout := time.Now().After(tokenTime.(time.Time).Add(30 * time.Minute))
-		// if timeout {
-		// 	logs.Error("token is timeout")
-		// 	r.Code = 0
-		// 	r.Msg = "token is timeout"
-		// 	c.JSON(http.StatusUnauthorized, r)
-		// 	c.Abort()
-		// 	return
-		// }
-		// tokens.Store(token, time.Now())
+		if c.Request.URL.Path == "/system/login" || strings.HasPrefix(c.Request.URL.Path, "/live/") ||
+			strings.HasPrefix(c.Request.URL.Path, "/rtmp2flv") {
+			c.Next()
+			return
+		}
+		r := result.Result{
+			Code: 1,
+			Msg:  "",
+		}
+		token := c.Request.Header.Get("token")
+		if len(token) == 0 {
+			logs.Error("token is null")
+			r.Code = 0
+			r.Msg = "token is null"
+			c.JSON(http.StatusUnauthorized, r)
+			c.Abort()
+			return
+		}
+		tokenTime, b := tokens.Load(token)
+		if !b {
+			logs.Error("token error")
+			r.Code = 0
+			r.Msg = "token error"
+			c.JSON(http.StatusUnauthorized, r)
+			c.Abort()
+			return
+		}
+		timeout := time.Now().After(tokenTime.(time.Time).Add(30 * time.Minute))
+		if timeout {
+			logs.Error("token is timeout")
+			r.Code = 0
+			r.Msg = "token is timeout"
+			c.JSON(http.StatusUnauthorized, r)
+			c.Abort()
+			return
+		}
+		tokens.Store(token, time.Now())
 		c.Next()
 	}
 }

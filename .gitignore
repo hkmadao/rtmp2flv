@@ -2,6 +2,6 @@ __debug_bin
 lastupdate.tmp
 resources/output/live/*.flv
 resources/output/log/*.log
-resources/output/rtmp2flv*
+resources/output/releases
 .idea
 .vscode
