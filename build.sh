@@ -23,12 +23,12 @@ for platform in $platforms; do
     fi
     go build -o ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv main.go
 
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/output/live
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/output/log
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/conf
+    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/output/live
+    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/output/log
+    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/conf
 
-    cp -r ./resources/static ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/static/
-    cp -r ./resources/conf ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/conf
+    cp -r ./resources/static ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/static/
+    cp -r ./resources/conf ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/conf
 
     cd ./resources/output/releases/ || exit
     rm -rf rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}".tar.gz

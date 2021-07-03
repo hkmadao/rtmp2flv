@@ -11,12 +11,12 @@ SET GOARCH=amd64
 SET CGO_ENABLED=0
 go build -o .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\rtmp2flv.exe main.go
 echo =============%GOOS%_%GOARCH%
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\output\live
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\output\log
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\conf
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\output\live
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\output\log
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\conf
 
-xcopy /S /Y /E .\resources\static .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\static\
-xcopy /S /Y /E .\resources\conf .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\conf
+xcopy /S /Y /E .\resources\static .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\static\
+xcopy /S /Y /E .\resources\conf .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\conf
 cd .\resources\output\releases\
 7z a -ttar -so rtmp2flv_%ver%_%GOOS%_%GOARCH%.tar rtmp2flv_%ver%_%GOOS%_%GOARCH%/ | 7z a -si rtmp2flv_%ver%_%GOOS%_%GOARCH%.tar.gz
 cd ..\..\..\
@@ -28,13 +28,12 @@ SET GOARCH=amd64
 SET CGO_ENABLED=0
 go build -o .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\rtmp2flv main.go
 echo =============%GOOS%_%GOARCH%
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\output\live
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\output\log
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\conf
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\output\live
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\output\log
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\conf
 
-xcopy /S /Y /E .\resources\static .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\static\
-xcopy /S /Y /E .\resources\db .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\db\
-xcopy /S /Y /E .\resources\conf .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\conf
+xcopy /S /Y /E .\resources\static .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\static\
+xcopy /S /Y /E .\resources\conf .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\conf
 cd .\resources\output\releases\
 7z a -ttar -so rtmp2flv_%ver%_%GOOS%_%GOARCH%.tar rtmp2flv_%ver%_%GOOS%_%GOARCH%/ | 7z a -si rtmp2flv_%ver%_%GOOS%_%GOARCH%.tar.gz
 cd ..\..\..\
@@ -46,13 +45,12 @@ SET GOARCH=arm
 SET CGO_ENABLED=0
 go build -o .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\rtmp2flv main.go
 echo =============%GOOS%_%GOARCH%
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\output\live
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\output\log
-md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\conf
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\output\live
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\output\log
+md .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\conf
 
-xcopy /S /Y /E .\resources\static .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\static\
-xcopy /S /Y /E .\resources\db .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\db\
-xcopy /S /Y /E .\resources\conf .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\conf
+xcopy /S /Y /E .\resources\static .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\static\
+xcopy /S /Y /E .\resources\conf .\resources\output\releases\rtmp2flv_%ver%_%GOOS%_%GOARCH%\resources\conf
 cd .\resources\output\releases\
 7z a -ttar -so rtmp2flv_%ver%_%GOOS%_%GOARCH%.tar rtmp2flv_%ver%_%GOOS%_%GOARCH%/ | 7z a -si rtmp2flv_%ver%_%GOOS%_%GOARCH%.tar.gz
 cd ..\..\..\

@@ -16,6 +16,6 @@ server:
     database:
         driver-type: 4
         driver: postgres
-        url: user=postgres password=123456 dbname=rtmp2flv host=localhost port=5432 sslmode=disable
+        url: user=postgres password=123456 dbname=rtmp2flv host=localhost port=5432 sslmode=disable TimeZone=UTC
         show-sql: false
         
