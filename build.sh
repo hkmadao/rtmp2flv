@@ -8,13 +8,13 @@ else
     exit 1
 fi
 #打多个平台的包
-platforms="windows_amd64 linux_amd64 linux_arm"
+platforms="linux_amd64"
 rm -rf ./resources/output/releases/
 for platform in $platforms; do
 
     export GOOS=$(echo "$platform" | gawk 'BEGIN{FS="_"} {print $1}')
     export GOARCH=$(echo "$platform" | gawk 'BEGIN{FS="_"} {print $2}')
-    export CGO_ENABLED=0
+    export CGO_ENABLED=1
     echo "${GOOS}"_"${GOARCH}"
     if [[ "${GOOS}" == "windows" ]]; then
         go build -o ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv.exe main.go
@@ -23,13 +23,13 @@ for platform in $platforms; do
     fi
     go build -o ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv main.go
 
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/output/live
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/output/log
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/conf
+    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/output/live
+    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/output/log
+    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/conf
 
-    cp -r ./resources/static ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/static/
-    cp -r ./resources/db ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/db/
-    cp -r ./resources/conf ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/conf
+    cp -r ./resources/static ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/static/
+    cp -r ./resources/db ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/db
+    cp -r ./resources/conf ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/conf
 
     cd ./resources/output/releases/ || exit
     rm -rf rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}".tar.gz
