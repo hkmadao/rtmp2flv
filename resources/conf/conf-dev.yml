@@ -12,7 +12,7 @@ server:
         path: ./resources/output/live
     log:
         path: ./resources/output/log
-        level: 6 #1-7 7输出的信息最多
+        level: 6
     database:
         driver-type: 4
         driver: postgres
