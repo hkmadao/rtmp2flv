@@ -103,7 +103,6 @@ func (hfw *HttpFlvWriter) GetPlayerHeartbeatStream() <-chan interface{} {
 
 func (hfw *HttpFlvWriter) httpWrite() {
 	defer func() {
-		close(hfw.heartbeatStream)
 		if r := recover(); r != nil {
 			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
@@ -119,15 +118,20 @@ func (hfw *HttpFlvWriter) httpWrite() {
 
 	sendPulse()
 	done := make(chan interface{})
-	defer close(done)
-	go func() {
+
+	go func(done <-chan interface{}) {
+		defer func() {
+			close(hfw.heartbeatStream)
+			if r := recover(); r != nil {
+				logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
+			}
+		}()
 		writer := hfw.writer.(gin.ResponseWriter)
 		for {
 			select {
 			case <-writer.CloseNotify():
 				return
 			case <-pulse:
-
 				sendPulse()
 			case <-done:
 				return
@@ -135,15 +139,25 @@ func (hfw *HttpFlvWriter) httpWrite() {
 				return
 			}
 		}
-	}()
-	for pkt := range utils.OrDonePacket(hfw.playerDone, hfw.pktStream) {
-		if err := hfw.writerPacket(pkt, pulse, sendPulse); err != nil {
+	}(done)
+	ticker := time.NewTicker(hfw.pulseInterval)
+	pktStream := utils.OrDonePacket(hfw.playerDone, hfw.pktStream)
+	for {
+		select {
+		case <-ticker.C:
+			close(done)
 			return
+		case pkt := <-pktStream:
+			if err := hfw.writerPacket(pkt); err != nil {
+				close(done)
+				return
+			}
+			ticker.Reset(hfw.pulseInterval)
 		}
 	}
 
 }
-func (hfw *HttpFlvWriter) writerPacket(pkt av.Packet, pulse <-chan time.Time, sendPulse func()) error {
+func (hfw *HttpFlvWriter) writerPacket(pkt av.Packet) error {
 	if hfw.start {
 		if err := hfw.muxer.WritePacket(pkt); err != nil {
 			logs.Error("writer packet to httpflv error : %v", err)
