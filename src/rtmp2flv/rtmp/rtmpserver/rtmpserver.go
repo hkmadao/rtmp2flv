@@ -10,6 +10,7 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
 	"github.com/deepch/vdk/format/rtmp"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/controllers"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/models"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmp/rtmppublisher"
 )
@@ -31,6 +32,8 @@ func GetSingleRtmpServer() *rtmpServer {
 
 func (rs *rtmpServer) StartRtmpServer() {
 	go rs.startRtmp()
+	done := make(chan interface{})
+	go rs.stopConn(done, controllers.CodeStream())
 }
 
 func (rs *rtmpServer) ExistsPublisher(code string) bool {
@@ -47,7 +50,7 @@ func (rs *rtmpServer) ExistsPublisher(code string) bool {
 	return exists
 }
 
-func (rs *rtmpServer) StopConn(done <-chan interface{}, codeStream <-chan string) {
+func (rs *rtmpServer) stopConn(done <-chan interface{}, codeStream <-chan string) {
 	for {
 		select {
 		case <-done:
@@ -163,7 +166,8 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 		close(pktStream)
 	}()
 
-	rtmppublisher.NewPublisher(done, pktStream, code, codecs, r)
+	p := rtmppublisher.NewPublisher(done, pktStream, code, codecs, r)
+	r.rms.Store(camera.Code, p)
 	for {
 		pkt, err := conn.ReadPacket()
 		if err != nil {
