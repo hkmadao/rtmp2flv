@@ -8,8 +8,8 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/httpflvmanage/httpflvwriter"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/models"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/services/httpflvmanage/httpflvwriter"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
 )
 

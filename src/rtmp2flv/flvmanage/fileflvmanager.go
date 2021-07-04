@@ -1,10 +1,10 @@
-package services
+package flvmanage
 
 import (
 	"sync"
 
 	"github.com/deepch/vdk/av"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/services/fileflvwriter"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/fileflvwriter"
 )
 
 type fileFlvManager struct {

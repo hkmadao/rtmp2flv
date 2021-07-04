@@ -6,7 +6,7 @@ import (
 	"syscall"
 
 	_ "github.com/hkmadao/rtmp2flv/src/rtmp2flv/conf" // 必须先导入配置文件
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmp/rtmpserver"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmpserver"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/task"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web"
 

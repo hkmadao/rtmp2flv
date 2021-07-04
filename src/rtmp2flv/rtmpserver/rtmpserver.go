@@ -12,7 +12,7 @@ import (
 	"github.com/deepch/vdk/format/rtmp"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/controllers"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/models"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmp/rtmppublisher"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmppublisher"
 )
 
 var rtmpserverInstance *rtmpServer

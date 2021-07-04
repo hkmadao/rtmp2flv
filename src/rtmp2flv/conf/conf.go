@@ -43,6 +43,8 @@ func loadConf(mode string) {
 
 //日志配置
 func logConfig(lout string) {
+	logs.EnableFuncCallDepth(true)
+	logs.SetLogFuncCallDepth(3)
 	if lout == logs.AdapterConsole {
 		f := &logs.PatternLogFormatter{
 			Pattern:    "%w %F:%n %t %m",
@@ -70,6 +72,4 @@ func logConfig(lout string) {
 		level = logs.LevelInformational
 	}
 	logs.SetLogger(logs.AdapterFile, `{"filename":"`+logPath+`/rtmp2flv.log","level":`+strconv.Itoa(level)+`,"maxlines":0,"maxsize":0,"daily":true,"maxdays":10,"color":true}`)
-	logs.EnableFuncCallDepth(true)
-	logs.SetLogFuncCallDepth(3)
 }
