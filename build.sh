@@ -34,6 +34,6 @@ for platform in $platforms; do
     rm -rf rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}".tar.gz
     tar -zcvf ./rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}".tar.gz rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/
 
-    rm -rf ./rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/
+    # rm -rf ./rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/
     cd ../../../
 done
