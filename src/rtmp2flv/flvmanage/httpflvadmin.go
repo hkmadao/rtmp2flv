@@ -1,4 +1,4 @@
-package services
+package flvmanage
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/deepch/vdk/av"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/services/httpflvmanage"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/httpflvmanage"
 )
 
 var hfas *HttpflvAdmin

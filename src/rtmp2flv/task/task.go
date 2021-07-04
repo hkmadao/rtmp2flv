@@ -6,7 +6,7 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/models"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmp/rtmpserver"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmpserver"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web"
 )
 
