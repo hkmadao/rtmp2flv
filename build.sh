@@ -9,7 +9,7 @@ else
 fi
 #打多个平台的包
 platforms="linux_amd64"
-rm -rf ./resources/output/releases/
+rm -rf ./resources/output/demo/
 for platform in $platforms; do
 
     export GOOS=$(echo "$platform" | gawk 'BEGIN{FS="_"} {print $1}')
@@ -17,21 +17,20 @@ for platform in $platforms; do
     export CGO_ENABLED=1
     echo "${GOOS}"_"${GOARCH}"
     if [[ "${GOOS}" == "windows" ]]; then
-        go build -o ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv.exe main.go
+        go build -o ./resources/output/demo/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv.exe main.go
     else
-        go build -o ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv main.go
+        go build -o ./resources/output/demo/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv main.go
     fi
-    go build -o ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/rtmp2flv main.go
 
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/output/live
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/output/log
-    mkdir -p ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/conf
+    mkdir -p ./resources/output/demo/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/output/live
+    mkdir -p ./resources/output/demo/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/output/log
+    mkdir -p ./resources/output/demo/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/conf
 
-    cp -r ./resources/static ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/static/
-    cp -r ./resources/db ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/db
-    cp -r ./resources/conf ./resources/output/releases/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/conf
+    cp -r ./resources/static ./resources/output/demo/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/static/
+    cp -r ./resources/db ./resources/output/demo/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/db
+    cp -r ./resources/conf ./resources/output/demo/rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/resources/conf
 
-    cd ./resources/output/releases/ || exit
+    cd ./resources/output/demo/ || exit
     rm -rf rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}".tar.gz
     tar -zcvf ./rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}".tar.gz rtmp2flv_"${ver}"_"${GOOS}"_"${GOARCH}"/
 
