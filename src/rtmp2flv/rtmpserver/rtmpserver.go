@@ -51,6 +51,11 @@ func (rs *rtmpServer) ExistsPublisher(code string) bool {
 }
 
 func (rs *rtmpServer) stopConn(done <-chan interface{}, codeStream <-chan string) {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
+		}
+	}()
 	for {
 		select {
 		case <-done:
