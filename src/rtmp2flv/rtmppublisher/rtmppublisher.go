@@ -49,14 +49,6 @@ func (r *Publisher) pktTransfer() {
 	flvmanage.GetSingleHttpflvAdmin().AddHttpFlvManager(r.hfmPktStream, r.code, r.codecs)
 }
 
-// func (r *Publisher) GetFfmPktStream() (<-chan av.Packet, string, []av.CodecData) {
-// 	return r.ffmPktStream, r.code, r.codecs
-// }
-
-// func (r *Publisher) GetHfmPktStream() (<-chan av.Packet, string, []av.CodecData) {
-// 	return r.ffmPktStream, r.code, r.codecs
-// }
-
 func tee(done <-chan interface{}, in <-chan av.Packet) (<-chan av.Packet, <-chan av.Packet) {
 	//设置缓冲，调节前后速率
 	out1 := make(chan av.Packet, 50)
