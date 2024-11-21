@@ -223,21 +223,19 @@ func CameraSaveVideoChange(c *gin.Context) {
 	camera.SaveVideo = q.SaveVideo
 	_, err = models.CameraUpdate(camera)
 	if err != nil {
-		logs.Error("enabled camera status %d error : %v", camera.Enabled, err)
+		logs.Error("SaveVideo camera status %d error : %v", camera.SaveVideo, err)
 		r.Code = 0
-		r.Msg = "enabled camera status %d error"
+		r.Msg = "SaveVideo camera status %d error"
 		c.JSON(http.StatusOK, r)
 		return
 	}
 	switch {
-	case q.Enabled != 1:
-
+	case q.SaveVideo != 1:
+		logs.Info("camera [%s] stop save video", q.Code)
+		flvmanage.GetSingleFileFlvManager().StopWrite(q.Code)
 	case q.SaveVideo == 1:
 		flvmanage.GetSingleFileFlvManager().StartWrite(q.Code)
 		logs.Info("camera [%s] start save video", q.Code)
-	default:
-		logs.Info("camera [%s] stop save video", q.Code)
-		flvmanage.GetSingleFileFlvManager().StopWrite(q.Code)
 	}
 
 	c.JSON(http.StatusOK, r)
@@ -267,19 +265,17 @@ func CameraLiveChange(c *gin.Context) {
 	camera.Live = q.Live
 	_, err = models.CameraUpdate(camera)
 	if err != nil {
-		logs.Error("enabled camera status %d error : %v", camera.Enabled, err)
+		logs.Error("Live camera status %d error : %v", camera.Live, err)
 		r.Code = 0
-		r.Msg = "enabled camera status %d error"
+		r.Msg = "Live camera status %d error"
 		c.JSON(http.StatusOK, r)
 		return
 	}
 	switch {
-	case q.Enabled != 1:
-
+	case q.Live != 1:
+		flvmanage.GetSingleHttpflvAdmin().StopWrite(q.Code)
 	case q.Live == 1:
 		flvmanage.GetSingleHttpflvAdmin().StartWrite(q.Code)
-	default:
-		flvmanage.GetSingleHttpflvAdmin().StopWrite(q.Code)
 	}
 
 	c.JSON(http.StatusOK, r)
@@ -310,19 +306,14 @@ func CameraPlayAuthCodeReset(c *gin.Context) {
 	camera.PlayAuthCode = playAuthCode
 	_, err = models.CameraUpdate(camera)
 	if err != nil {
-		logs.Error("enabled camera status %d error : %v", camera.Enabled, err)
+		logs.Error("PlayAuthCode camera status %d error : %v", camera.PlayAuthCode, err)
 		r.Code = 0
-		r.Msg = "enabled camera status %d error"
+		r.Msg = "PlayAuthCode camera status %d error"
 		c.JSON(http.StatusOK, r)
 		return
 	}
-	switch {
-	case q.Enabled != 1:
-
-	case q.Live == 1:
-		flvmanage.GetSingleHttpflvAdmin().StopWrite(q.Code)
-		flvmanage.GetSingleHttpflvAdmin().StartWrite(q.Code)
-	}
+	flvmanage.GetSingleHttpflvAdmin().StopWrite(q.Code)
+	flvmanage.GetSingleHttpflvAdmin().StartWrite(q.Code)
 
 	c.JSON(http.StatusOK, r)
 }

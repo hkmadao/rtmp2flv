@@ -50,11 +50,15 @@ func NewHttpFlvManager(pktStream <-chan av.Packet, code string, codecs []av.Code
 	}
 	if camera.Live != 1 {
 		go func() {
-			select {
-			case <-hfm.GetDone():
-				return
-			case <-hfm.pktStream:
-				return
+			for {
+				select {
+				case <-hfm.GetDone():
+					return
+				case _, ok := <-hfm.pktStream:
+					if !ok {
+						return
+					}
+				}
 			}
 		}()
 		return hfm
@@ -77,6 +81,7 @@ func (hfm *HttpFlvManager) StopWrite() {
 //Write extends to writer.Writer
 func (hfm *HttpFlvManager) flvWrite() {
 	defer func() {
+		close(hfm.done)
 		if r := recover(); r != nil {
 			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
@@ -107,6 +112,10 @@ func (hfm *HttpFlvManager) AddHttpFlvPlayer(
 	pktStream := make(chan av.Packet, 1024)
 	hfw := httpflvwriter.NewHttpFlvWriter(hfm.GetDone(), playerDone, pulseInterval, pktStream, hfm.code, hfm.codecs, writer, sessionId, hfm)
 	hfm.hfws.Store(sessionId, hfw)
+	go func() {
+		<-hfw.GetDone()
+		hfm.hfws.Delete(sessionId)
+	}()
 	return hfw.GetDone(), nil
 }
 

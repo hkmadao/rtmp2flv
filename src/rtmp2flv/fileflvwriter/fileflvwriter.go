@@ -64,11 +64,15 @@ func NewFileFlvWriter(
 	}
 	if camera.SaveVideo != 1 {
 		go func() {
-			select {
-			case <-ffw.GetDone():
-				return
-			case <-ffw.pktStream:
-				return
+			for {
+				select {
+				case <-ffw.GetDone():
+					return
+				case _, ok := <-ffw.pktStream:
+					if !ok {
+						return
+					}
+				}
 			}
 		}()
 		return ffw
@@ -101,9 +105,15 @@ func (ffw *FileFlvWriter) splitFile() {
 			return
 		case <-time.After(1 * time.Hour):
 			ffw.StopWrite()
-			ffwn := NewFileFlvWriter(ffw.pktStream, ffw.code, ffw.codecs, ffw.iffm)
-			ffwn.iffm.UpdateFFWS(ffwn.code, ffwn)
-			continue
+			_, pktStreamOk := <-ffw.pktStream
+			if pktStreamOk {
+				logs.Info("to create NewFileFlvWriter : %s", ffw.code)
+				ffwn := NewFileFlvWriter(ffw.pktStream, ffw.code, ffw.codecs, ffw.iffm)
+				ffwn.iffm.UpdateFFWS(ffwn.code, ffwn)
+			} else {
+				logs.Info("FileFlvWriter pktStream is closed : %s", ffw.code)
+			}
+			return
 		}
 	}
 }
@@ -142,8 +152,12 @@ func (ffw *FileFlvWriter) flvWrite() {
 		logs.Error("create file flv error : %v", err)
 		return
 	}
-	defer ffw.fd.Close()
+	defer func() {
+		close(ffw.done)
+		ffw.fd.Close()
+	}()
 	muxer := flv.NewMuxer(ffw)
+	timeNow := time.Now().Local()
 	for pkt := range utils.OrDonePacket(ffw.done, ffw.pktStream) {
 		if ffw.isStart {
 			if err := muxer.WritePacket(pkt); err != nil {
@@ -164,7 +178,10 @@ func (ffw *FileFlvWriter) flvWrite() {
 			}
 			continue
 		}
-		logs.Debug("ingrore package")
+		if time.Now().Local().After(timeNow.Add(1 * time.Minute)) {
+			timeNow = time.Now().Local()
+			logs.Error("FileFlvWriter ingrore package: %s", ffw.code)
+		}
 	}
 }
 

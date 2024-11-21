@@ -67,7 +67,7 @@ func tee(done <-chan interface{}, in <-chan av.Packet) (<-chan av.Packet, <-chan
 				case out2 <- val:
 					out2 = nil
 				default:
-					logs.Debug("publisher tee lose packet")
+					logs.Error("publisher tee lose packet")
 				}
 			}
 		}

@@ -182,10 +182,10 @@ func login(c *gin.Context) {
 		return
 	}
 	userNameParam := params["userName"].(string)
-	passwordParam := params["userName"].(string)
+	passwordParam := params["password"].(string)
 	userName := config.DefaultString("server.user.name", "")
 	password := config.DefaultString("server.user.password", "")
-	if userNameParam != userName && passwordParam != password {
+	if userNameParam == "" || passwordParam == "" || userNameParam != userName || passwordParam != password {
 		logs.Error("userName : %s , password : %s error", userNameParam, passwordParam)
 		r.Code = 0
 		r.Msg = "userName or password error ! "
