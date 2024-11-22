@@ -114,9 +114,6 @@ func (hfw *HttpFlvWriter) httpWrite() {
 	ticker := time.NewTicker(hfw.pulseInterval)
 	defer func() {
 		close(hfw.done)
-		if r := recover(); r != nil {
-			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
-		}
 	}()
 	pktStream := utils.OrDonePacket(hfw.playerDone, hfw.pktStream)
 

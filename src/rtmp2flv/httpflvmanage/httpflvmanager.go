@@ -81,10 +81,12 @@ func (hfm *HttpFlvManager) StopWrite() {
 //Write extends to writer.Writer
 func (hfm *HttpFlvManager) flvWrite() {
 	defer func() {
-		close(hfm.done)
 		if r := recover(); r != nil {
 			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
+	}()
+	defer func() {
+		close(hfm.done)
 	}()
 	for pkt := range utils.OrDonePacket(hfm.done, hfm.pktStream) {
 		hfm.hfws.Range(func(key, value interface{}) bool {
