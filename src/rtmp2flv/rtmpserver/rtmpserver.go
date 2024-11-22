@@ -51,6 +51,11 @@ func (rs *rtmpServer) ExistsPublisher(code string) bool {
 }
 
 func (rs *rtmpServer) stopConn(done <-chan interface{}, codeStream <-chan string) {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
+		}
+	}()
 	for {
 		select {
 		case <-done:
@@ -73,8 +78,8 @@ func (rs *rtmpServer) stopConn(done <-chan interface{}, codeStream <-chan string
 
 func (r *rtmpServer) startRtmp() {
 	defer func() {
-		if r := recover(); r != nil {
-			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
+		if recover_rusult := recover(); recover_rusult != nil {
+			logs.Error("system painc : %v \nstack : %v", recover_rusult, string(debug.Stack()))
 		}
 	}()
 	rtmpPort, err := config.Int("server.rtmp.port")
@@ -90,14 +95,17 @@ func (r *rtmpServer) startRtmp() {
 }
 
 func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
-	if r := recover(); r != nil {
-		logs.Error("HandleConn error : %v", r)
-		err := conn.Close()
-		if err != nil {
-			logs.Error("HandleConn Close err : %v", err)
+	defer func() {
+		if recover_rusult := recover(); recover_rusult != nil {
+			logs.Error("HandleConn error : %v", recover_rusult)
+			err := conn.Close()
+			if err != nil {
+				logs.Error("HandleConn Close err : %v", err)
+			}
+			return
 		}
-		return
-	}
+	}()
+	logs.Info("client arrive : %s", conn.NetConn().RemoteAddr().String())
 	err := conn.Prepare()
 	if err != nil {
 		logs.Error("Prepare error : %v , remote port : %s", err, conn.NetConn().RemoteAddr().String())
@@ -127,6 +135,8 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 	if ok := authentication(camera, code, authCode, conn); !ok {
 		return
 	}
+
+	logs.Info("publish authentication success : %s", code)
 
 	codecs, err := conn.Streams()
 	if err != nil {

@@ -2,7 +2,7 @@ package utils
 
 import "github.com/deepch/vdk/av"
 
-func OrDonePacket(done <-chan interface{}, c <-chan av.Packet) <-chan av.Packet {
+func OrDonePacket(done <-chan int, c <-chan av.Packet) <-chan av.Packet {
 	valStream := make(chan av.Packet)
 	go func() {
 		defer close(valStream)

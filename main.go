@@ -10,6 +10,9 @@ import (
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/task"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web"
 
+	// "net/http"
+	// _ "net/http/pprof"
+
 	"github.com/beego/beego/v2/core/logs"
 )
 
@@ -21,6 +24,7 @@ func main() {
 	done := make(chan bool, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	logs.Info("Server Start Awaiting Signal")
+	// http.ListenAndServe("0.0.0.0:6060", nil)
 	select {
 	case sig := <-sigs:
 		logs.Info(sig)

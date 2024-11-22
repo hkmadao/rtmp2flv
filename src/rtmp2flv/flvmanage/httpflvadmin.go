@@ -57,11 +57,11 @@ func (hfa *HttpflvAdmin) StartWrite(code string) {
 
 //添加播放者
 func (hfa *HttpflvAdmin) AddHttpFlvPlayer(
-	playerDone <-chan interface{},
+	playerDone <-chan int,
 	pulseInterval time.Duration,
 	code string,
 	writer io.Writer,
-) (<-chan interface{}, error) {
+) (<-chan int, error) {
 	v, b := hfa.hfms.Load(code)
 	if b {
 		hfm := v.(*httpflvmanage.HttpFlvManager)
