@@ -44,7 +44,6 @@ func (rs *rtmpServer) ExistsPublisher(code string) bool {
 			exists = true
 			return false
 		}
-		exists = codeKey == code
 		return true
 	})
 	return exists
