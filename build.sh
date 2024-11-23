@@ -29,9 +29,9 @@ for platform in $platforms; do
     mkdir -p ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/resources/conf
     mkdir -p ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/resources/db
 
-    cp -r ./resources/static ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/resources/static/
-    cp -r ./resources/conf ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/resources/conf
-    cp -r ./resources/db ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/resources/db
+    cp -r ./resources/static/* ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/resources/static/
+    cp -r ./resources/conf/* ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/resources/conf
+    cp -r ./resources/db/* ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/resources/db
 
     cd ./resources/output/sqlite3/ || exit
     rm -rf rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}".tar.gz
