@@ -1,5 +1,9 @@
 #!/bin/bash
 #./build.sh 0.0.1
+# 安装arm的交叉编译器
+# sudo apt-get install gcc-arm-linux-gnueabihf
+# 安装window的交叉编译器
+# sudo apt-get install mingw-w64
 #vscode每次保存会将linux换行符替换为window换行符，如果此文件不能执行，请自行替换换行符
 ver=$1
 if [ -n "${ver}" ]; then
@@ -19,6 +23,8 @@ for platform in $platforms; do
     echo "${GOOS_VAR}"_"${GOARCH_VAR}"
     if [[ "${GOOS_VAR}" == "windows" ]]; then
         GOOS=${GOOS_VAR} GOARCH=${GOARCH_VAR} CGO_ENABLED=${CGO_ENABLED_VAR} CC=x86_64-w64-mingw32-gcc go build -o ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/rtmp2flv.exe main.go
+    elif [[ "${platform}" == "linux_arm" ]]; then
+        GOOS=${GOOS_VAR} GOARCH=${GOARCH_VAR} CGO_ENABLED=${CGO_ENABLED_VAR} CC=arm-linux-gnueabihf-gcc go build -o ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/rtmp2flv_ main.go
     else
         GOOS=${GOOS_VAR} GOARCH=${GOARCH_VAR} CGO_ENABLED=${CGO_ENABLED_VAR} go build -o ./resources/output/sqlite3/rtmp2flv_"${ver}"_"${GOOS_VAR}"_"${GOARCH_VAR}"/rtmp2flv main.go
     fi
