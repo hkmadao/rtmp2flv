@@ -97,11 +97,12 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 	defer func() {
 		if recover_rusult := recover(); recover_rusult != nil {
 			logs.Error("HandleConn error : %v", recover_rusult)
-			err := conn.Close()
-			if err != nil {
-				logs.Error("HandleConn Close err : %v", err)
-			}
-			return
+		}
+	}()
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			logs.Error("HandleConn Close err : %v", err)
 		}
 	}()
 	logs.Info("client arrive : %s", conn.NetConn().RemoteAddr().String())
@@ -169,7 +170,7 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 
 	done := make(chan interface{})
 	//添加缓冲，缓解前后速率不一致问题，但是如果收包平均速率大于消费平均速率，依然会导致丢包
-	pktStream := make(chan av.Packet, 50)
+	pktStream := make(chan av.Packet, 1024)
 	defer func() {
 		close(done)
 		close(pktStream)

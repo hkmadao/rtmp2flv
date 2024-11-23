@@ -139,6 +139,7 @@ func (hfw *HttpFlvWriter) httpWrite() {
 func (hfw *HttpFlvWriter) changeNotBlockStream(pktStream <-chan av.Packet) <-chan av.Packet {
 	notBlockStream := make(chan av.Packet, 1024)
 	go func() {
+		defer close(notBlockStream)
 		for {
 			select {
 			case pkt, ok := <-pktStream:
@@ -190,9 +191,9 @@ func (hfw *HttpFlvWriter) writerPacket(pkt av.Packet, templateTime *time.Time) e
 
 //Write extends to io.Writer
 func (hfw *HttpFlvWriter) Write(p []byte) (n int, err error) {
-	start := time.Now()
+	// start := time.Now()
 	defer func() {
-		logs.Debug(time.Since(start))
+		// logs.Debug(time.Since(start))
 		if r := recover(); r != nil {
 			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
