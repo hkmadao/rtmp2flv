@@ -78,7 +78,7 @@ func NewFileFlvManager(pktStream <-chan av.Packet, code string, codecs []av.Code
 		return ffm
 	}
 	go func() {
-		ticker := time.NewTicker(1 * time.Minute)
+		ticker := time.NewTicker(1 * time.Hour)
 		for {
 			select {
 			case <-ffm.GetDone():
