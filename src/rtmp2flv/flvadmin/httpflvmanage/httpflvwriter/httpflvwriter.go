@@ -39,6 +39,10 @@ func (hfw *HttpFlvWriter) SetCode(code string) {
 	hfw.code = code
 }
 
+func (hfw *HttpFlvWriter) GetCode() string {
+	return hfw.code
+}
+
 func (hfw *HttpFlvWriter) SetCodecs(codecs []av.CodecData) {
 	hfw.codecs = codecs
 }

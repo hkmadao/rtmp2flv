@@ -3,7 +3,7 @@ package rtmppublisher
 import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/flvmanage"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/flvadmin"
 )
 
 type RtmpServer interface {
@@ -45,8 +45,8 @@ func (r *Publisher) pktTransfer() {
 	r.ffmPktStream = ffmPktStream
 	r.hfmPktStream = hfmPktStream
 	logs.Debug("publisher [%s] create customer", r.code)
-	flvmanage.GetSingleFileFlvManager().FlvWrite(r.ffmPktStream, r.code, r.codecs)
-	flvmanage.GetSingleHttpflvAdmin().AddHttpFlvManager(r.hfmPktStream, r.code, r.codecs)
+	flvadmin.GetSingleFileFlvAdmin().FlvWrite(r.ffmPktStream, r.code, r.codecs)
+	flvadmin.GetSingleHttpflvAdmin().AddHttpFlvManager(r.hfmPktStream, r.code, r.codecs)
 }
 
 func tee(done <-chan interface{}, in <-chan av.Packet) (<-chan av.Packet, <-chan av.Packet) {

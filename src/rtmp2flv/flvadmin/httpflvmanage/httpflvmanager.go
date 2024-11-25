@@ -8,7 +8,7 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/httpflvwriter"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/flvadmin/httpflvmanage/httpflvwriter"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/models"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
 )
@@ -21,16 +21,29 @@ type HttpFlvManager struct {
 	hfws      sync.Map
 }
 
-func (ffw *HttpFlvManager) GetDone() <-chan int {
-	return ffw.done
+func (hfm *HttpFlvManager) GetCode() string {
+	return hfm.code
 }
 
-func (ffw *HttpFlvManager) GetPktStream() <-chan av.Packet {
-	return ffw.pktStream
+func (hfm *HttpFlvManager) SetCodecs(codecs []av.CodecData) {
+	hfm.codecs = codecs
+	hfm.hfws.Range(func(key, value interface{}) bool {
+		wi := value.(*httpflvwriter.HttpFlvWriter)
+		wi.SetCodecs(hfm.codecs)
+		return true
+	})
 }
 
-func (ffw *HttpFlvManager) GetCodecs() []av.CodecData {
-	return ffw.codecs
+func (hfm *HttpFlvManager) GetDone() <-chan int {
+	return hfm.done
+}
+
+func (hfm *HttpFlvManager) GetPktStream() <-chan av.Packet {
+	return hfm.pktStream
+}
+
+func (hfm *HttpFlvManager) GetCodecs() []av.CodecData {
+	return hfm.codecs
 }
 
 func NewHttpFlvManager(pktStream <-chan av.Packet, code string, codecs []av.CodecData) *HttpFlvManager {
@@ -85,18 +98,15 @@ func (hfm *HttpFlvManager) flvWrite() {
 			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
-	defer func() {
-		close(hfm.done)
-	}()
 	for pkt := range utils.OrDonePacket(hfm.done, hfm.pktStream) {
 		hfm.hfws.Range(func(key, value interface{}) bool {
 			wi := value.(*httpflvwriter.HttpFlvWriter)
 			select {
 			case wi.GetPktStream() <- pkt:
-			// logs.Debug("flvWrite pkt")
+				// logs.Debug("flvWrite pkt")
 			default:
 				//当播放者速率跟不上时，会发生丢包
-				logs.Debug("camera [%s] http flv sessionId [%s] write fail", hfm.code, wi.GetSessionId())
+				logs.Debug("camera [%s] http flv sessionId [%d] write fail", hfm.code, wi.GetSessionId())
 			}
 			return true
 		})
