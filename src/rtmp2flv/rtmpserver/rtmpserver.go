@@ -86,6 +86,7 @@ func (r *rtmpServer) startRtmp() {
 		logs.Error("get rtmp port fail : %v", err)
 		return
 	}
+	// rtmp.Debug = true
 	s := &rtmp.Server{
 		Addr:       ":" + strconv.Itoa(rtmpPort),
 		HandleConn: r.handleRtmpConn,
