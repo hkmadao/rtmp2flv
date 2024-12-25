@@ -50,7 +50,7 @@ func (ffm *FileFlvAdmin) UpdateFFWS(code string, ffw *fileflvmanager.FileFlvMana
 	}
 }
 
-//更新sps、pps等信息
+// 更新sps、pps等信息
 func (ffm *FileFlvAdmin) UpdateCodecs(code string, codecs []av.CodecData) {
 	rfw, ok := ffm.ffws.Load(code)
 	if ok {

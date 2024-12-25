@@ -1,7 +1,5 @@
 server:
-    user:
-        name: admin
-        password: admin
+    security: true
     rtmp:
         port: 1935
     http:

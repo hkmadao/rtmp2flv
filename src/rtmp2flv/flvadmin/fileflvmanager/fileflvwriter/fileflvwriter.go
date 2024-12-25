@@ -12,8 +12,9 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
 	"github.com/deepch/vdk/format/flv"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/models"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
+	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
 type IFileFlvManager interface {
@@ -80,15 +81,16 @@ func NewFileFlvWriter(
 		isStart:     false,
 		ffm:         ffm,
 	}
-	camera, err := models.CameraSelectOne(models.Camera{Code: code})
+	condition := common.GetEqualCondition("code", code)
+	camera, err := base_service.CameraFindOneByCondition(condition)
 	if err != nil {
 		logs.Error("query camera error : %v", err)
 		return ffw
 	}
-	if camera.OnlineStatus != 1 {
+	if !camera.OnlineStatus {
 		return ffw
 	}
-	if camera.SaveVideo != 1 {
+	if !camera.SaveVideo {
 		go func() {
 			for {
 				select {
@@ -162,7 +164,7 @@ func (ffw *FileFlvWriter) createFlvFile() error {
 	return nil
 }
 
-//Write extends to writer.Writer
+// Write extends to writer.Writer
 func (ffw *FileFlvWriter) flvWrite() {
 	defer func() {
 		if r := recover(); r != nil {

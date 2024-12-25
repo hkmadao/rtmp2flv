@@ -46,7 +46,7 @@ func (r *Publisher) pktTransfer() {
 	r.hfmPktStream = hfmPktStream
 	logs.Debug("publisher [%s] create customer", r.code)
 	flvadmin.GetSingleFileFlvAdmin().FlvWrite(r.ffmPktStream, r.code, r.codecs)
-	flvadmin.GetSingleHttpflvAdmin().AddHttpFlvManager(r.hfmPktStream, r.code, r.codecs)
+	flvadmin.GetSingleHttpFlvAdmin().AddHttpFlvManager(r.hfmPktStream, r.code, r.codecs)
 }
 
 func tee(done <-chan interface{}, in <-chan av.Packet) (<-chan av.Packet, <-chan av.Packet) {

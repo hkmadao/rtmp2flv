@@ -8,8 +8,9 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/flvadmin/fileflvmanager/fileflvwriter"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/models"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
+	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
 type FileFlvManager struct {
@@ -54,15 +55,16 @@ func NewFileFlvManager(pktStream <-chan av.Packet, code string, codecs []av.Code
 		code:        code,
 		codecs:      codecs,
 	}
-	camera, err := models.CameraSelectOne(models.Camera{Code: code})
+	condition := common.GetEqualCondition("code", code)
+	camera, err := base_service.CameraFindOneByCondition(condition)
 	if err != nil {
 		logs.Error("query camera error : %v", err)
 		return ffm
 	}
-	if camera.OnlineStatus != 1 {
+	if !camera.OnlineStatus {
 		return ffm
 	}
-	if camera.SaveVideo != 1 {
+	if !camera.SaveVideo {
 		go func() {
 			for {
 				select {
@@ -120,7 +122,7 @@ func (ffm *FileFlvManager) StopWrite() {
 	}()
 }
 
-//Write extends to writer.Writer
+// Write extends to writer.Writer
 func (ffm *FileFlvManager) flvWrite() {
 	defer func() {
 		if r := recover(); r != nil {

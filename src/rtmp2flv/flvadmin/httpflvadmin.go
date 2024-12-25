@@ -20,7 +20,7 @@ func init() {
 	hfas = &HttpFlvAdmin{}
 }
 
-func GetSingleHttpflvAdmin() *HttpFlvAdmin {
+func GetSingleHttpFlvAdmin() *HttpFlvAdmin {
 	return hfas
 }
 
@@ -50,7 +50,7 @@ func (hfa *HttpFlvAdmin) StartWrite(code string) {
 	}
 }
 
-//添加播放者
+// 添加播放者
 func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 	playerDone <-chan int,
 	pulseInterval time.Duration,
@@ -65,7 +65,7 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 	return nil, errors.New("camera no connection")
 }
 
-//更新sps、pps等信息
+// 更新sps、pps等信息
 func (hfa *HttpFlvAdmin) UpdateCodecs(code string, codecs []av.CodecData) {
 	rfw, ok := hfa.hfms.Load(code)
 	if ok {

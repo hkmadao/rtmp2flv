@@ -10,9 +10,11 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
 	"github.com/deepch/vdk/format/rtmp"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/controllers"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/models"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmppublisher"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
+	ext_controller "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/controller/ext"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dao/entity"
+	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
 var rtmpserverInstance *rtmpServer
@@ -33,7 +35,7 @@ func GetSingleRtmpServer() *rtmpServer {
 func (rs *rtmpServer) StartRtmpServer() {
 	go rs.startRtmp()
 	done := make(chan interface{})
-	go rs.stopConn(done, controllers.CodeStream())
+	go rs.stopConn(done, ext_controller.CodeStream())
 }
 
 func (rs *rtmpServer) ExistsPublisher(code string) bool {
@@ -122,8 +124,8 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 		return
 	}
 
-	q := models.Camera{Code: code}
-	camera, err := models.CameraSelectOne(q)
+	condition := common.GetEqualCondition("code", code)
+	camera, err := base_service.CameraFindOneByCondition(condition)
 	if err != nil {
 		logs.Error("no camera error : %s", code)
 		err = conn.Close()
@@ -166,8 +168,8 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 	}
 	r.conns.Store(camera.Code, conn)
 
-	camera.OnlineStatus = 1
-	models.CameraUpdate(camera)
+	camera.OnlineStatus = true
+	base_service.CameraUpdateById(camera)
 
 	done := make(chan interface{})
 	//添加缓冲，缓解前后速率不一致问题，但是如果收包平均速率大于消费平均速率，依然会导致丢包
@@ -193,12 +195,12 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 		}
 	}
 
-	camera, err = models.CameraSelectOne(q)
+	camera, err = base_service.CameraFindOneByCondition(condition)
 	if err != nil {
 		logs.Error("no camera error : %s", code)
 	} else {
-		camera.OnlineStatus = 0
-		models.CameraUpdate(camera)
+		camera.OnlineStatus = false
+		base_service.CameraUpdateById(camera)
 	}
 
 	r.rms.Delete(code)
@@ -210,7 +212,7 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 
 }
 
-//获取uri信息
+// 获取uri信息
 func getParamByURI(conn *rtmp.Conn) (string, string, bool) {
 	logs.Info("Path : %s , remote port : %s", conn.URL.Path, conn.NetConn().RemoteAddr().String())
 	path := conn.URL.Path
@@ -226,14 +228,14 @@ func getParamByURI(conn *rtmp.Conn) (string, string, bool) {
 	return paths[0], paths[1], true
 }
 
-//权限验证
-func authentication(camera models.Camera, code string, authCode string, conn *rtmp.Conn) bool {
+// 权限验证
+func authentication(camera entity.Camera, code string, authCode string, conn *rtmp.Conn) bool {
 	if camera.RtmpAuthCode != authCode {
 		logs.Error("camera %s RtmpAuthCode error : %s", code, authCode)
 		conn.Close()
 		return false
 	}
-	if camera.Enabled != 1 {
+	if !camera.Enabled {
 		logs.Error("camera %s disabled : %s", code, authCode)
 		err := conn.Close()
 		if err != nil {

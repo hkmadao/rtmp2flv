@@ -4,16 +4,14 @@ import (
 	"net/http"
 	"runtime/debug"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/beego/beego/v2/core/config"
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/gin-gonic/gin"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/controllers"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/result"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
+	base_controller "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/controller/base"
+	ext_controller "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/controller/ext"
 )
 
 var tokens sync.Map
@@ -51,31 +49,61 @@ func (w *web) StartWeb() {
 
 func (w *web) webRun() {
 	defer func() {
-		if r := recover(); r != nil {
-			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
+		if result := recover(); result != nil {
+			logs.Error("system painc : %v \nstack : %v", result, string(debug.Stack()))
 		}
 	}()
 	router := gin.Default()
 	router.Use(Cors())
-	router.Use(Validate())
+	router.Use(ext_controller.TokenValidate())
 
-	router.POST("/system/login", login)
+	router.POST("/login", ext_controller.Login)
+	router.POST("/logout", ext_controller.Logout)
 
-	router.GET("/live/:method/:code/:authCode.flv", controllers.HttpFlvPlay)
-
-	router.GET("/camera/list", controllers.CameraList)
-	router.GET("/camera/detail", controllers.CameraDetail)
-	router.POST("/camera/edit", controllers.CameraEdit)
-	router.POST("/camera/delete/:id", controllers.CameraDelete)
-	router.POST("/camera/enabled", controllers.CameraEnabled)
-	router.POST("/camera/savevideochange", controllers.CameraSaveVideoChange)
-	router.POST("/camera/livechange", controllers.CameraLiveChange)
-	router.POST("/camera/playauthcodereset", controllers.CameraPlayAuthCodeReset)
-
-	router.GET("/camerashare/list", controllers.CameraShareList)
-	router.POST("/camerashare/edit", controllers.CameraShareEdit)
-	router.POST("/camerashare/delete/:id", controllers.CameraShareDelete)
-	router.POST("/camerashare/enabled", controllers.CameraShareEnabled)
+	router.GET("/live/:method/:code/:authCode.flv", ext_controller.HttpFlvPlay)
+	// user
+	router.POST("/user/updatePw", ext_controller.ChangePassword)
+	router.POST("/user/add", base_controller.UserAdd)
+	router.POST("/user/update", base_controller.UserUpdate)
+	router.POST("/user/remove", base_controller.UserRemove)
+	router.POST("/user/batchRemove", base_controller.UserBatchRemove)
+	router.GET("/user/getById/:id", base_controller.UserGetById)
+	router.GET("/user/getByIds", base_controller.UserGetByIds)
+	router.POST("/user/aq", base_controller.UserAq)
+	router.POST("/user/aqPage", base_controller.UserAqPage)
+	// toke
+	router.POST("/token/add", base_controller.TokenAdd)
+	router.POST("/token/update", base_controller.TokenUpdate)
+	router.POST("/token/remove", base_controller.TokenRemove)
+	router.POST("/token/batchRemove", base_controller.TokenBatchRemove)
+	router.GET("/token/getById/:id", base_controller.TokenGetById)
+	router.GET("/token/getByIds", base_controller.TokenGetByIds)
+	router.POST("/token/aq", base_controller.TokenAq)
+	router.POST("/token/aqPage", base_controller.TokenAqPage)
+	// camera
+	router.POST("/camera/add", base_controller.CameraAdd)
+	router.POST("/camera/update", base_controller.CameraUpdate)
+	router.POST("/camera/remove", base_controller.CameraRemove)
+	router.POST("/camera/batchRemove", base_controller.CameraBatchRemove)
+	router.GET("/camera/getById/:id", base_controller.CameraGetById)
+	router.GET("/camera/getByIds", base_controller.CameraGetByIds)
+	router.POST("/camera/aq", base_controller.CameraAq)
+	router.POST("/camera/aqPage", base_controller.CameraAqPage)
+	router.POST("/camera/enabled", ext_controller.CameraEnabled)
+	router.POST("/camera/saveVideoChange", ext_controller.CameraSaveVideoChange)
+	router.POST("/camera/liveChange", ext_controller.CameraLiveChange)
+	router.POST("/camera/playAuthCodeReset", ext_controller.CameraPlayAuthCodeReset)
+	// camerashare
+	router.POST("/cameraShare/add", base_controller.CameraShareAdd)
+	router.POST("/cameraShare/update", base_controller.CameraShareUpdate)
+	router.POST("/cameraShare/remove", base_controller.CameraShareRemove)
+	router.POST("/cameraShare/batchRemove", base_controller.CameraShareBatchRemove)
+	router.GET("/cameraShare/getById/:id", base_controller.CameraShareGetById)
+	router.GET("/cameraShare/getByIds", base_controller.CameraShareGetByIds)
+	router.POST("/cameraShare/aq", base_controller.CameraShareAq)
+	router.POST("/cameraShare/aqPage", base_controller.CameraShareAqPage)
+	router.POST("/cameraShare/enabled", ext_controller.CameraShareEnabled)
+	router.POST("/cameraShare/playAuthCodeReset", ext_controller.CameraSharePlayAuthCodeReset)
 
 	staticPath, err := config.String("server.http.static.path")
 	if err != nil {
@@ -98,110 +126,34 @@ func (w *web) webRun() {
 
 // 跨域
 func Cors() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		method := c.Request.Method               //请求方法
-		origin := c.Request.Header.Get("Origin") //请求头部
+	return func(ctx *gin.Context) {
+		//请求方法
+		method := ctx.Request.Method
+		//请求头部
+		origin := ctx.Request.Header.Get("Origin")
 		if origin != "" {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-			c.Header("Access-Control-Allow-Origin", "*")                                       // 这是允许访问所有域
-			c.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE,UPDATE") //服务器支持的所有跨域请求的方法,为了避免浏览次请求的多次'预检'请求
-			//  header的类型
-			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Length, X-CSRF-Token, Token,session,X_Requested_With,Accept, Origin, Host, Connection, Accept-Encoding, Accept-Language,DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Pragma")
-			//              允许跨域设置                                                                                                      可以返回其他子段
-			c.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers,Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma,FooBar") // 跨域关键设置 让浏览器可以解析
-			c.Header("Access-Control-Max-Age", "172800")                                                                                                                                                           // 缓存请求信息 单位为秒
-			c.Header("Access-Control-Allow-Credentials", "false")                                                                                                                                                  //  跨域请求是否需要带cookie信息 默认设置为true
-			c.Set("content-type", "application/json")                                                                                                                                                              // 设置返回格式是json
+			ctx.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+			// 这是允许访问所有域
+			ctx.Header("Access-Control-Allow-Origin", "*")
+			//服务器支持的所有跨域请求的方法,为了避免浏览次请求的多次'预检'请求
+			ctx.Header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+			// header的类型
+			ctx.Header("Access-Control-Allow-Headers", "Authorization, Content-Length, X-CSRF-Token, Token,session,X_Requested_With,Accept, Origin, Host, Connection, Accept-Encoding, Accept-Language,DNT, X-CustomHeader, Keep-Alive, User-Agent, X-Requested-With, If-Modified-Since, Cache-Control, Content-Type, Pragma")
+			// 跨域关键设置 让浏览器可以解析
+			ctx.Header("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers,Cache-Control,Content-Language,Content-Type,Expires,Last-Modified,Pragma,FooBar")
+			// 缓存请求信息 单位为秒
+			ctx.Header("Access-Control-Max-Age", "172800")
+			//  跨域请求是否需要带cookie信息 默认设置为true
+			ctx.Header("Access-Control-Allow-Credentials", "false")
+			// 设置返回格式是json
+			ctx.Set("content-type", "application/json")
 		}
 
 		//放行所有OPTIONS方法
 		if method == "OPTIONS" {
-			c.JSON(http.StatusOK, "Options Request!")
+			ctx.JSON(http.StatusOK, "Options Request!")
 		}
 		// 处理请求
-		c.Next() //  处理请求
+		ctx.Next()
 	}
-}
-
-//验证token
-func Validate() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if c.Request.URL.Path == "/system/login" || strings.HasPrefix(c.Request.URL.Path, "/live/") ||
-			strings.HasPrefix(c.Request.URL.Path, "/rtmp2flv") {
-			c.Next()
-			return
-		}
-		r := result.Result{
-			Code: 1,
-			Msg:  "",
-		}
-		token := c.Request.Header.Get("token")
-		if len(token) == 0 {
-			logs.Error("token is null")
-			r.Code = 0
-			r.Msg = "token is null"
-			c.JSON(http.StatusUnauthorized, r)
-			c.Abort()
-			return
-		}
-		tokenTime, b := tokens.Load(token)
-		if !b {
-			logs.Error("token error")
-			r.Code = 0
-			r.Msg = "token error"
-			c.JSON(http.StatusUnauthorized, r)
-			c.Abort()
-			return
-		}
-		timeout := time.Now().After(tokenTime.(time.Time).Add(30 * time.Minute))
-		if timeout {
-			logs.Error("token is timeout")
-			r.Code = 0
-			r.Msg = "token is timeout"
-			c.JSON(http.StatusUnauthorized, r)
-			c.Abort()
-			return
-		}
-		tokens.Store(token, time.Now())
-		c.Next()
-	}
-}
-
-func login(c *gin.Context) {
-	r := result.Result{
-		Code: 1,
-		Msg:  "",
-	}
-	params := make(map[string]interface{})
-	err := c.BindJSON(&params)
-	if err != nil {
-		logs.Error("param error : %v", err)
-		r.Code = 0
-		r.Msg = "param error"
-		c.JSON(http.StatusOK, r)
-		return
-	}
-	userNameParam := params["userName"].(string)
-	passwordParam := params["password"].(string)
-	userName := config.DefaultString("server.user.name", "")
-	password := config.DefaultString("server.user.password", "")
-	if userNameParam == "" || passwordParam == "" || userNameParam != userName || passwordParam != password {
-		logs.Error("userName : %s , password : %s error", userNameParam, passwordParam)
-		r.Code = 0
-		r.Msg = "userName or password error ! "
-		c.JSON(http.StatusOK, r)
-		return
-	}
-	logs.Info("用户[%s]登录成功！", userName)
-	token, err := utils.NextToke()
-	if err != nil {
-		logs.Error("create token fail")
-		r.Code = 0
-		r.Msg = "create token fail"
-		c.JSON(http.StatusOK, r)
-		return
-	}
-	r.Data = map[string]string{"token": token}
-	tokens.Store(token, time.Now())
-	c.JSON(http.StatusOK, r)
 }
