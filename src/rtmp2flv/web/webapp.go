@@ -61,6 +61,11 @@ func (w *web) webRun() {
 	router.POST("/logout", ext_controller.Logout)
 
 	router.GET("/live/:method/:code/:authCode.flv", ext_controller.HttpFlvPlay)
+	router.GET("/vod/getDuration/:fileName", ext_controller.HttpFlvVODFileDuration)
+	router.GET("/vod/start/:fileName", ext_controller.HttpFlvVODStart)
+	router.GET("/vod/fetch", ext_controller.HttpFlvVODFetch)
+	router.GET("/vod/getFileList", ext_controller.CameraGetRecordFiles)
+
 	// user
 	router.POST("/user/updatePw", ext_controller.ChangePassword)
 	router.POST("/user/add", base_controller.UserAdd)
@@ -104,6 +109,23 @@ func (w *web) webRun() {
 	router.POST("/cameraShare/aqPage", base_controller.CameraShareAqPage)
 	router.POST("/cameraShare/enabled", ext_controller.CameraShareEnabled)
 	router.POST("/cameraShare/playAuthCodeReset", ext_controller.CameraSharePlayAuthCodeReset)
+
+	// camerarecord
+	router.POST("/cameraRecord/remove", base_controller.CameraRecordRemove)
+	router.POST("/cameraRecord/batchRemove", base_controller.CameraRecordBatchRemove)
+	router.GET("/cameraRecord/getById/:id", base_controller.CameraRecordGetById)
+	router.GET("/cameraRecord/getByIds", base_controller.CameraRecordGetByIds)
+	router.POST("/cameraRecord/aq", base_controller.CameraRecordAq)
+	router.POST("/cameraRecord/aqPage", base_controller.CameraRecordAqPage)
+	router.GET("/cameraRecord/getDuration/:idCameraRecord", ext_controller.CameraRecordFileDuration)
+	router.GET("/cameraRecord/start/:idCameraRecord", ext_controller.CameraRecordFilePlay)
+	router.GET("/cameraRecord/fetch", ext_controller.CameraRecordFileFetch)
+
+	router.POST("/clientCamera/aq", ext_controller.ClientCameraAq)
+	router.POST("/clientCameraRecord/aqPage", ext_controller.ClientCameraRecordAqPage)
+	router.GET("/clientCameraRecord/getDuration/:idCameraRecord", ext_controller.ClientCameraRecordFileDuration)
+	router.GET("/clientCameraRecord/start/:idCameraRecord", ext_controller.ClientCameraRecordFilePlay)
+	router.GET("/clientCameraRecord/fetch", ext_controller.ClientCameraRecordFileFetch)
 
 	staticPath, err := config.String("server.http.static.path")
 	if err != nil {

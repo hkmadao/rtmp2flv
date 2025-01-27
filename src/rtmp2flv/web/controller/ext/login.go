@@ -152,7 +152,7 @@ func TokenValidate() gin.HandlerFunc {
 		if err != nil {
 			logs.Error("find sysToken error : %v", err)
 			result := common.ErrorResult("token error")
-			ctx.JSON(http.StatusOK, result)
+			ctx.JSON(http.StatusUnauthorized, result)
 			ctx.Abort()
 			return
 		}

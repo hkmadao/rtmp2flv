@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/hkmadao/rtmp2flv/src/rtmp2flv/conf" // 必须先导入配置文件
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmpserver"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/tcpserver"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/task"
 
@@ -17,6 +18,7 @@ import (
 )
 
 func main() {
+	go tcpserver.ReverseCommandServer()
 	rtmpserver.GetSingleRtmpServer().StartRtmpServer()
 	task.GetSingleTask().StartTask()
 	web.GetSingleWeb().StartWeb()

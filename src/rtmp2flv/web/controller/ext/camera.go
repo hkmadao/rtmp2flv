@@ -12,6 +12,7 @@ import (
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dao/entity"
 	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
+	ext_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/ext"
 )
 
 func CameraEnabled(ctx *gin.Context) {
@@ -169,4 +170,17 @@ var codeStream = make(chan string)
 
 func CodeStream() <-chan string {
 	return codeStream
+}
+
+func CameraGetRecordFiles(ctx *gin.Context) {
+	fileInfoList, err := ext_service.CameraFindRecordFiles()
+	if err != nil {
+		logs.Error("CameraGetRecordFiles error : %v", err)
+		result := common.ErrorResult("internal error")
+		ctx.JSON(http.StatusOK, result)
+		return
+	}
+
+	result := common.SuccessResultWithMsg("success", fileInfoList)
+	ctx.JSON(http.StatusOK, result)
 }
