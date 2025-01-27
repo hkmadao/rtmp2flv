@@ -44,6 +44,7 @@ func init() {
 	orm.RegisterModel(new(entity.Camera))
 	orm.RegisterModel(new(entity.CameraRecord))
 	orm.RegisterModel(new(entity.CameraShare))
+	orm.RegisterModel(new(entity.ClientInfo))
 	orm.RegisterModelWithPrefix("sys_", new(entity.User))
 	orm.RegisterModelWithPrefix("sys_", new(entity.Token))
 }
@@ -54,6 +55,7 @@ func init() {
 	descMap["Camera"] = desc.GetCameraDesc()
 	descMap["CameraRecord"] = desc.GetCameraRecordDesc()
 	descMap["CameraShare"] = desc.GetCameraShareDesc()
+	descMap["ClientInfo"] = desc.GetClientInfoDesc()
 	descMap["User"] = desc.GetUserDesc()
 	descMap["Token"] = desc.GetTokenDesc()
 }

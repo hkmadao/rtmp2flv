@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/tcpserver"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
+	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
 type FlvFileMediaInfoParam struct {
@@ -20,11 +20,20 @@ type FlvFileMediaInfoParam struct {
 }
 
 func ClientCameraRecordFileDuration(ctx *gin.Context) {
-	defer func() {
-		if result := recover(); result != nil {
-			logs.Error("system painc : %v \nstack : %v", result, string(debug.Stack()))
-		}
-	}()
+	idClient, ok := ctx.Params.Get("idClient")
+	if !ok || idClient == "" {
+		logs.Error("path param idClient is rquired")
+		http.Error(ctx.Writer, "path param idClient is rquired", http.StatusBadRequest)
+		return
+	}
+
+	clientInfo, err := base_service.ClientInfoSelectById(idClient)
+	if err != nil {
+		logs.Error("ClientInfoSelectById error: %v", err)
+		result := common.ErrorResult("internal error")
+		ctx.JSON(http.StatusOK, result)
+		return
+	}
 
 	idCameraRecord, ok := ctx.Params.Get("idCameraRecord")
 	if !ok || idCameraRecord == "" {
@@ -42,7 +51,7 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 
 	messageChan := make(chan []byte)
 	rcm := tcpserver.ReverseCommandMessage{
-		ClientCode:  "demo",
+		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvFileMediaInfo",
 		MessageId:   messageId,
 		Created:     time.Now(),
@@ -57,7 +66,12 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	tcpserver.SendReverseCommand(rcm, string(paramBytes))
+	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if err != nil {
+		logs.Error("SendReverseCommand error: %v", err)
+		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		return
+	}
 	defer tcpserver.ClearReverseCommand(messageId)
 	select {
 	case messageBytes := <-messageChan:
@@ -75,13 +89,21 @@ type PlayParam struct {
 }
 
 func ClientCameraRecordFilePlay(ctx *gin.Context) {
-	defer func() {
-		if result := recover(); result != nil {
-			logs.Error("system painc : %v \nstack : %v", result, string(debug.Stack()))
-		}
-	}()
-	ctx.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	ctx.Writer.Header().Set("Connection", "keep-alive")
+	idClient, ok := ctx.Params.Get("idClient")
+	if !ok || idClient == "" {
+		logs.Error("path param idClient is rquired")
+		http.Error(ctx.Writer, "path param idClient is rquired", http.StatusBadRequest)
+		return
+	}
+
+	clientInfo, err := base_service.ClientInfoSelectById(idClient)
+	if err != nil {
+		logs.Error("ClientInfoSelectById error: %v", err)
+		result := common.ErrorResult("internal error")
+		ctx.JSON(http.StatusOK, result)
+		return
+	}
+
 	playerId := ctx.Query("playerId")
 	if playerId == "" {
 		logs.Error("query param playerId is rquired")
@@ -118,7 +140,7 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 
 	messageChan := make(chan []byte)
 	rcm := tcpserver.ReverseCommandMessage{
-		ClientCode:  "demo",
+		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvPlay",
 		MessageId:   messageId,
 		Created:     time.Now(),
@@ -135,7 +157,12 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	tcpserver.SendReverseCommand(rcm, string(paramBytes))
+	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if err != nil {
+		logs.Error("SendReverseCommand error: %v", err)
+		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		return
+	}
 	defer tcpserver.ClearReverseCommand(messageId)
 Loop:
 	for {
@@ -164,13 +191,20 @@ type FetchMoreDataParam struct {
 }
 
 func ClientCameraRecordFileFetch(ctx *gin.Context) {
-	defer func() {
-		if result := recover(); result != nil {
-			logs.Error("system painc : %v \nstack : %v", result, string(debug.Stack()))
-		}
-	}()
-	ctx.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-	ctx.Writer.Header().Set("Connection", "keep-alive")
+	idClient, ok := ctx.Params.Get("idClient")
+	if !ok || idClient == "" {
+		logs.Error("path param idClient is rquired")
+		http.Error(ctx.Writer, "path param idClient is rquired", http.StatusBadRequest)
+		return
+	}
+
+	clientInfo, err := base_service.ClientInfoSelectById(idClient)
+	if err != nil {
+		logs.Error("ClientInfoSelectById error: %v", err)
+		result := common.ErrorResult("internal error")
+		ctx.JSON(http.StatusOK, result)
+		return
+	}
 
 	playerId := ctx.Query("playerId")
 	if playerId == "" {
@@ -201,7 +235,7 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 
 	messageChan := make(chan []byte)
 	rcm := tcpserver.ReverseCommandMessage{
-		ClientCode:  "demo",
+		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvFetchMoreData",
 		MessageId:   messageId,
 		Created:     time.Now(),
@@ -217,7 +251,12 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	tcpserver.SendReverseCommand(rcm, string(paramBytes))
+	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if err != nil {
+		logs.Error("SendReverseCommand error: %v", err)
+		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		return
+	}
 	defer tcpserver.ClearReverseCommand(messageId)
 	select {
 	case messageBytes := <-messageChan:
@@ -229,9 +268,23 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 }
 
 func ClientCameraAq(ctx *gin.Context) {
-	// ctx.Writeresult.Header().Set("Access-Control-Allow-Origin", "*")
+	idClient, ok := ctx.Params.Get("idClient")
+	if !ok || idClient == "" {
+		logs.Error("path param idClient is rquired")
+		http.Error(ctx.Writer, "path param idClient is rquired", http.StatusBadRequest)
+		return
+	}
+
+	clientInfo, err := base_service.ClientInfoSelectById(idClient)
+	if err != nil {
+		logs.Error("ClientInfoSelectById error: %v", err)
+		result := common.ErrorResult("internal error")
+		ctx.JSON(http.StatusOK, result)
+		return
+	}
+
 	condition := common.AqCondition{}
-	err := ctx.BindJSON(&condition)
+	err = ctx.BindJSON(&condition)
 	if err != nil {
 		logs.Error("param error : %v", err)
 		result := common.ErrorResult(fmt.Sprintf("param error : %v", err))
@@ -247,7 +300,7 @@ func ClientCameraAq(ctx *gin.Context) {
 
 	messageChan := make(chan []byte)
 	rcm := tcpserver.ReverseCommandMessage{
-		ClientCode:  "demo",
+		ClientCode:  clientInfo.ClientCode,
 		MessageType: "cameraAq",
 		MessageId:   messageId,
 		Created:     time.Now(),
@@ -260,7 +313,12 @@ func ClientCameraAq(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	tcpserver.SendReverseCommand(rcm, string(paramBytes))
+	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if err != nil {
+		logs.Error("SendReverseCommand error: %v", err)
+		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		return
+	}
 	defer tcpserver.ClearReverseCommand(messageId)
 	select {
 	case messageBytes := <-messageChan:
@@ -272,9 +330,23 @@ func ClientCameraAq(ctx *gin.Context) {
 }
 
 func ClientCameraRecordAqPage(ctx *gin.Context) {
-	// ctx.Writeresult.Header().Set("Access-Control-Allow-Origin", "*")
+	idClient, ok := ctx.Params.Get("idClient")
+	if !ok || idClient == "" {
+		logs.Error("path param idClient is rquired")
+		http.Error(ctx.Writer, "path param idClient is rquired", http.StatusBadRequest)
+		return
+	}
+
+	clientInfo, err := base_service.ClientInfoSelectById(idClient)
+	if err != nil {
+		logs.Error("ClientInfoSelectById error: %v", err)
+		result := common.ErrorResult("internal error")
+		ctx.JSON(http.StatusOK, result)
+		return
+	}
+
 	pageInfoInput := common.AqPageInfoInput{}
-	err := ctx.BindJSON(&pageInfoInput)
+	err = ctx.BindJSON(&pageInfoInput)
 	if err != nil {
 		ctx.AbortWithError(500, err)
 		logs.Error("param error : %v", err)
@@ -292,7 +364,7 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 
 	messageChan := make(chan []byte)
 	rcm := tcpserver.ReverseCommandMessage{
-		ClientCode:  "demo",
+		ClientCode:  clientInfo.ClientCode,
 		MessageType: "historyVideoPage",
 		MessageId:   messageId,
 		Created:     time.Now(),
@@ -305,7 +377,12 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	tcpserver.SendReverseCommand(rcm, string(paramBytes))
+	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if err != nil {
+		logs.Error("SendReverseCommand error: %v", err)
+		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		return
+	}
 	defer func() {
 		tcpserver.ClearReverseCommand(messageId)
 	}()

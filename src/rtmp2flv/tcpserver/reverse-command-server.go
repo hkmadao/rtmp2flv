@@ -42,7 +42,7 @@ func ClearReverseCommand(messageId string) (err error) {
 	return
 }
 
-func SendReverseCommand(rcm ReverseCommandMessage, paramStr string) (err error) {
+func SendReverseCommand(secret string, rcm ReverseCommandMessage, paramStr string) (err error) {
 	_, ok := reverseCommandMessageMap.Load(rcm.MessageId)
 	if ok {
 		logs.Error("MessageId: %s exists", rcm.MessageId)
@@ -63,8 +63,7 @@ func SendReverseCommand(rcm ReverseCommandMessage, paramStr string) (err error) 
 		Param:       paramStr,
 		MessageId:   rcm.MessageId,
 	}
-	//TODO get secret
-	secret := "A012345678901234"
+
 	_, err = writeCommandMessage(secret, cm, conn)
 	if err != nil {
 		logs.Error("writeCommandMessage error: %v", err)

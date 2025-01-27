@@ -85,6 +85,15 @@ func (w *web) webRun() {
 	router.GET("/token/getByIds", base_controller.TokenGetByIds)
 	router.POST("/token/aq", base_controller.TokenAq)
 	router.POST("/token/aqPage", base_controller.TokenAqPage)
+	// clientInfo
+	router.POST("/clientInfo/add", base_controller.ClientInfoAdd)
+	router.POST("/clientInfo/update", base_controller.ClientInfoUpdate)
+	router.POST("/clientInfo/remove", base_controller.ClientInfoRemove)
+	router.POST("/clientInfo/batchRemove", base_controller.ClientInfoBatchRemove)
+	router.GET("/clientInfo/getById/:id", base_controller.ClientInfoGetById)
+	router.GET("/clientInfo/getByIds", base_controller.ClientInfoGetByIds)
+	router.POST("/clientInfo/aq", base_controller.ClientInfoAq)
+	router.POST("/clientInfo/aqPage", base_controller.ClientInfoAqPage)
 	// camera
 	router.POST("/camera/add", base_controller.CameraAdd)
 	router.POST("/camera/update", base_controller.CameraUpdate)
@@ -121,11 +130,11 @@ func (w *web) webRun() {
 	router.GET("/cameraRecord/start/:idCameraRecord", ext_controller.CameraRecordFilePlay)
 	router.GET("/cameraRecord/fetch", ext_controller.CameraRecordFileFetch)
 
-	router.POST("/clientCamera/aq", ext_controller.ClientCameraAq)
-	router.POST("/clientCameraRecord/aqPage", ext_controller.ClientCameraRecordAqPage)
-	router.GET("/clientCameraRecord/getDuration/:idCameraRecord", ext_controller.ClientCameraRecordFileDuration)
-	router.GET("/clientCameraRecord/start/:idCameraRecord", ext_controller.ClientCameraRecordFilePlay)
-	router.GET("/clientCameraRecord/fetch", ext_controller.ClientCameraRecordFileFetch)
+	router.POST("/clientCamera/aq/:idClient", ext_controller.ClientCameraAq)
+	router.POST("/clientCameraRecord/aqPage/:idClient", ext_controller.ClientCameraRecordAqPage)
+	router.GET("/clientCameraRecord/getDuration/:idClient/:idCameraRecord", ext_controller.ClientCameraRecordFileDuration)
+	router.GET("/clientCameraRecord/start/:idClient/:idCameraRecord", ext_controller.ClientCameraRecordFilePlay)
+	router.GET("/clientCameraRecord/fetch/:idClient", ext_controller.ClientCameraRecordFileFetch)
 
 	staticPath, err := config.String("server.http.static.path")
 	if err != nil {
