@@ -49,7 +49,7 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan []byte)
+	messageChan := make(chan *tcpserver.ResMessage)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvFileMediaInfo",
@@ -74,9 +74,16 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 	}
 	defer tcpserver.ClearReverseCommand(messageId)
 	select {
-	case messageBytes := <-messageChan:
-		logs.Info(string(messageBytes))
-		ctx.Data(http.StatusOK, gin.MIMEJSON, messageBytes)
+	case resMessage := <-messageChan:
+		// result := common.AppResult{}
+		// err := json.Unmarshal(resMessage.Data, &result)
+		// if err != nil {
+		// 	logs.Error("result Unmarshal error: %v", err)
+		// 	http.Error(ctx.Writer, "result Unmarshal error", http.StatusInternalServerError)
+		// 	return
+		// }
+		// ctx.JSON(http.StatusOK, result)
+		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
 	case <-time.NewTicker(1 * time.Minute).C:
 		logs.Error("read form client time out")
 	}
@@ -138,7 +145,7 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan []byte)
+	messageChan := make(chan *tcpserver.ResMessage)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvPlay",
@@ -167,13 +174,13 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 Loop:
 	for {
 		select {
-		case messageBytes, ok := <-messageChan:
+		case resMessage, ok := <-messageChan:
 			if !ok {
 				logs.Info("messageChan is closed, exit")
 				break Loop
 			}
 
-			_, err := ctx.Writer.Write(messageBytes)
+			_, err := ctx.Writer.Write([]byte(*resMessage.Data))
 			if err != nil {
 				logs.Error("ctx write error: %v", err)
 				break Loop
@@ -233,7 +240,7 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan []byte)
+	messageChan := make(chan *tcpserver.ResMessage)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvFetchMoreData",
@@ -259,9 +266,16 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 	}
 	defer tcpserver.ClearReverseCommand(messageId)
 	select {
-	case messageBytes := <-messageChan:
-		logs.Info(string(messageBytes))
-		ctx.Data(http.StatusOK, gin.MIMEJSON, messageBytes)
+	case resMessage := <-messageChan:
+		// result := common.AppResult{}
+		// err := json.Unmarshal(resMessage.Data, &result)
+		// if err != nil {
+		// 	logs.Error("result Unmarshal error: %v", err)
+		// 	http.Error(ctx.Writer, "result Unmarshal error", http.StatusInternalServerError)
+		// 	return
+		// }
+		// ctx.JSON(http.StatusOK, result)
+		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
 	case <-time.NewTicker(1 * time.Minute).C:
 		logs.Error("read form client time out")
 	}
@@ -298,7 +312,7 @@ func ClientCameraAq(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan []byte)
+	messageChan := make(chan *tcpserver.ResMessage)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "cameraAq",
@@ -321,9 +335,16 @@ func ClientCameraAq(ctx *gin.Context) {
 	}
 	defer tcpserver.ClearReverseCommand(messageId)
 	select {
-	case messageBytes := <-messageChan:
-		logs.Info(string(messageBytes))
-		ctx.Data(http.StatusOK, gin.MIMEJSON, messageBytes)
+	case resMessage := <-messageChan:
+		// result := common.AppResult{}
+		// err := json.Unmarshal(resMessage.Data, &result)
+		// if err != nil {
+		// 	logs.Error("result Unmarshal error: %v", err)
+		// 	http.Error(ctx.Writer, "result Unmarshal error", http.StatusInternalServerError)
+		// 	return
+		// }
+		// ctx.JSON(http.StatusOK, result)
+		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
 	case <-time.NewTicker(1 * time.Minute).C:
 		logs.Error("read form client time out")
 	}
@@ -362,7 +383,7 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan []byte)
+	messageChan := make(chan *tcpserver.ResMessage)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "historyVideoPage",
@@ -387,9 +408,16 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		tcpserver.ClearReverseCommand(messageId)
 	}()
 	select {
-	case messageBytes := <-messageChan:
-		logs.Info(string(messageBytes))
-		ctx.Data(http.StatusOK, gin.MIMEJSON, messageBytes)
+	case resMessage := <-messageChan:
+		// result := common.AppResult{}
+		// err := json.Unmarshal(resMessage.Data, &result)
+		// if err != nil {
+		// 	logs.Error("result Unmarshal error: %v", err)
+		// 	http.Error(ctx.Writer, "result Unmarshal error", http.StatusInternalServerError)
+		// 	return
+		// }
+		// ctx.JSON(http.StatusOK, result)
+		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
 	case <-time.NewTicker(1 * time.Minute).C:
 		logs.Error("read form client time out")
 	}

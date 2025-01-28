@@ -72,7 +72,12 @@ func Login(ctx *gin.Context) {
 	sysToken.CreateTime = time.Now()
 	idToken, _ := utils.GenerateId()
 	sysToken.IdToken = idToken
-	sysToken.ExpiredTime = time.Now().Add(1 * time.Hour)
+	duration, err := config.Int("server.token.duration")
+	if err != nil {
+		logs.Error("get server duration error: %v. \n use default 60 minute", err)
+		duration = 60
+	}
+	sysToken.ExpiredTime = time.Now().Add(time.Duration(duration) * time.Minute)
 	sysToken.NickName = user.NickName
 	sysToken.Username = user.Account
 	sysToken.Token = token
@@ -165,7 +170,12 @@ func TokenValidate() gin.HandlerFunc {
 			ctx.Abort()
 			return
 		}
-		sysToken.ExpiredTime = time.Now().Add(1 * time.Hour)
+		duration, err := config.Int("server.token.duration")
+		if err != nil {
+			logs.Error("get server duration error: %v. \n use default 60 minute", err)
+			duration = 60
+		}
+		sysToken.ExpiredTime = time.Now().Add(time.Duration(duration) * time.Minute)
 		_, err = base_service.TokenUpdateById(sysToken)
 		if err != nil {
 			logs.Error("user: %s update token fail", sysToken.Username)

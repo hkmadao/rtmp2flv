@@ -3,6 +3,7 @@ package tcpserver
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -10,7 +11,14 @@ import (
 	"github.com/beego/beego/v2/core/config"
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
+	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
+
+type ResMessage struct {
+	MessageId string
+	Data      *[]byte
+}
 
 type ReverseCommandMessage struct {
 	ClientCode string
@@ -18,7 +26,7 @@ type ReverseCommandMessage struct {
 	MessageType string
 	MessageId   string
 	Created     time.Time
-	MessageChan chan<- []byte
+	MessageChan chan<- *ResMessage
 	conn        net.Conn
 }
 
@@ -105,17 +113,29 @@ func handleConn(conn net.Conn) {
 		return
 	}
 	dataLen := utils.BigEndianToUint32(dataLenBytes)
-	logs.Info("dataLen: %d", dataLen)
+
 	registerMaxLen := uint32(64 * 1024)
 	if dataLen > registerMaxLen {
 		logs.Error("register message len too long: %d, max len: %d", dataLen, registerMaxLen)
 		return
 	}
-	dataBodyBytes := make([]byte, dataLen)
-	_, err = conn.Read(dataBodyBytes)
-	if err != nil {
-		logs.Error("conn read message body error: %v", err)
-		return
+	dataBodyBytes := make([]byte, 0)
+	for {
+		buffer := make([]byte, dataLen-uint32(len(dataBodyBytes)))
+		n, err := conn.Read(buffer)
+		if err != nil {
+			if err != io.EOF {
+				logs.Error("conn read message body error: %v", err)
+				return
+			}
+			break
+		}
+
+		// 处理读取到的数据，n是实际读取的字节数
+		dataBodyBytes = append(dataBodyBytes, buffer[:n]...)
+		if uint32(len(dataBodyBytes)) == dataLen {
+			break
+		}
 	}
 
 	registerInfo := RegisterInfo{}
@@ -125,6 +145,29 @@ func handleConn(conn net.Conn) {
 		return
 	}
 	// validate sign
+	conditon := common.GetEqualCondition("clientCode", registerInfo.ClientCode)
+	clientInfo, err := base_service.ClientInfoFindOneByCondition(conditon)
+	if err != nil {
+		logs.Error("ClientInfoFindOneByCondition error: %v", err)
+		return
+	}
+	planText := fmt.Sprintf("clientCode=%s&dateStr=%s&signSecret=%s", registerInfo.ClientCode, registerInfo.DateStr, clientInfo.SignSecret)
+	signStr := utils.Md5(planText)
+	if signStr != registerInfo.Sign {
+		logs.Error("sign: %s error", registerInfo.Sign)
+		return
+	}
+	registerDate, err := time.Parse(time.RFC3339, registerInfo.DateStr)
+	if err != nil {
+		logs.Error("parse register dateStr: %s error: %v", registerInfo.DateStr, err)
+		return
+	}
+
+	fgExpires := time.Since(registerDate) > 5*time.Minute
+	if fgExpires {
+		logs.Error("dateStr: %s expires", registerInfo.DateStr)
+		return
+	}
 
 	if registerInfo.ConnType == "keepChannel" {
 		value, ok := reverseCommandClientMap.Load(registerInfo.ClientCode)
@@ -136,6 +179,7 @@ func handleConn(conn net.Conn) {
 			}
 			reverseCommandClientMap.Delete(registerInfo.ClientCode)
 		}
+		logs.Info("keepChannel: %s connect", registerInfo.ClientCode)
 		reverseCommandClientMap.Store(registerInfo.ClientCode, conn)
 	} else if registerInfo.ConnType == "flvPlay" {
 		value, ok := reverseCommandMessageMap.Load(registerInfo.MessageId)
@@ -146,7 +190,7 @@ func handleConn(conn net.Conn) {
 		vodMessage := value.(ReverseCommandMessage)
 		vodMessage.conn = conn
 
-		readMessage(conn, vodMessage)
+		readMessage(clientInfo.Secret, conn, vodMessage)
 	} else {
 		value, ok := reverseCommandMessageMap.Load(registerInfo.MessageId)
 		if !ok {
@@ -156,55 +200,70 @@ func handleConn(conn net.Conn) {
 		vodMessage := value.(ReverseCommandMessage)
 		vodMessage.conn = conn
 
-		readRes(conn, vodMessage)
+		readRes(clientInfo.Secret, conn, vodMessage)
 	}
 }
 
-func readMessage(conn net.Conn, vodMessage ReverseCommandMessage) {
+func readMessage(secret string, conn net.Conn, vodMessage ReverseCommandMessage) {
 	defer func() {
 		conn.Close()
 		close(vodMessage.MessageChan)
 	}()
 	for {
-		shouldReturn := readOneMessage(conn, vodMessage)
+		shouldReturn := readOneMessage(secret, conn, vodMessage)
 		if shouldReturn {
 			return
 		}
 	}
 }
 
-func readRes(conn net.Conn, vodMessage ReverseCommandMessage) {
+func readRes(secret string, conn net.Conn, vodMessage ReverseCommandMessage) {
 	defer func() {
 		conn.Close()
 		close(vodMessage.MessageChan)
 	}()
-	readOneMessage(conn, vodMessage)
+	readOneMessage(secret, conn, vodMessage)
 }
 
-func readOneMessage(conn net.Conn, vodMessage ReverseCommandMessage) bool {
+func readOneMessage(secret string, conn net.Conn, vodMessage ReverseCommandMessage) bool {
 	dataLenBytes := make([]byte, 4)
 	_, err := conn.Read(dataLenBytes)
 	if err != nil {
 		logs.Error("conn read message len error: %v", err)
 		return true
 	}
+
 	dataLen := utils.BigEndianToUint32(dataLenBytes)
 
-	dataBodyBytes := make([]byte, dataLen)
-	_, err = conn.Read(dataBodyBytes)
-	if err != nil {
-		logs.Error("conn read message body error: %v", err)
-		return true
+	dataBodyBytes := make([]byte, 0)
+	for {
+		buffer := make([]byte, dataLen-uint32(len(dataBodyBytes)))
+		n, err := conn.Read(buffer)
+		if err != nil {
+			if err != io.EOF {
+				logs.Error("conn read message body error: %v", err)
+				return true
+			}
+			break
+		}
+		// 处理读取到的数据，n是实际读取的字节数
+		dataBodyBytes = append(dataBodyBytes, buffer[:n]...)
+		if uint32(len(dataBodyBytes)) == dataLen {
+			break
+		}
 	}
 
-	//TODO get secret
-	secret := "A012345678901234"
-	resultStr, err := utils.DecryptAES([]byte(secret), string(dataBodyBytes))
+	plainBytes, err := utils.DecryptAES([]byte(secret), dataBodyBytes)
 	if err != nil {
 		logs.Error("DecryptAES message body error: %v", err)
 		return true
 	}
 
-	vodMessage.MessageChan <- []byte(resultStr)
+	resMessage := ResMessage{
+		MessageId: vodMessage.MessageId,
+		Data:      &plainBytes,
+	}
+
+	vodMessage.MessageChan <- &resMessage
 	return false
 }

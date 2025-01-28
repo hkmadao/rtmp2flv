@@ -32,12 +32,21 @@ func writeCommandMessage(secretStr string, commandMessage CommandMessage, writer
 		return
 	}
 
-	encryptMessageStr, err := utils.EncryptAES([]byte(secretStr), string(messageBytes))
+	// messageLenBytes := utils.Int32ToByteBigEndian(int32(len(messageBytes)))
+	// fullMessageBytes := append(messageLenBytes, messageBytes...)
+	// n, err = writer.Write(fullMessageBytes)
+	// if err != nil {
+	// 	logs.Error("register error: %v", err)
+	// 	return
+	// }
+	// return
+
+	encryptMessageBytes, err := utils.EncryptAES([]byte(secretStr), messageBytes)
 	if err != nil {
 		logs.Error("EncryptAES error: %v", err)
 		return
 	}
-	encryptMessageBytes := string(encryptMessageStr)
+
 	encryptMessageLen := len(encryptMessageBytes)
 	encryptMessageLenBytes := utils.Int32ToByteBigEndian(int32(encryptMessageLen))
 	fullMessageBytes := append(encryptMessageLenBytes, encryptMessageBytes...)
