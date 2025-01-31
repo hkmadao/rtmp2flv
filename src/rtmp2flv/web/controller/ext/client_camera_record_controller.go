@@ -66,10 +66,15 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
-	if err != nil {
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
-		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		if !sendReverseCommandErr.IsCustomError() {
+			http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		result := common.ErrorResult(sendReverseCommandErr.Error())
+		ctx.JSON(http.StatusOK, result)
 		return
 	}
 	defer tcpserver.ClearReverseCommand(messageId)
@@ -164,10 +169,14 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
-	if err != nil {
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
-		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		if !sendReverseCommandErr.IsCustomError() {
+			http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		http.Error(ctx.Writer, sendReverseCommandErr.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer tcpserver.ClearReverseCommand(messageId)
@@ -258,10 +267,15 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
-	if err != nil {
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
-		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		if !sendReverseCommandErr.IsCustomError() {
+			http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		result := common.ErrorResult(sendReverseCommandErr.Error())
+		ctx.JSON(http.StatusOK, result)
 		return
 	}
 	defer tcpserver.ClearReverseCommand(messageId)
@@ -327,10 +341,15 @@ func ClientCameraAq(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
-	if err != nil {
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
-		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		if !sendReverseCommandErr.IsCustomError() {
+			http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		result := common.ErrorResult(sendReverseCommandErr.Error())
+		ctx.JSON(http.StatusOK, result)
 		return
 	}
 	defer tcpserver.ClearReverseCommand(messageId)
@@ -398,10 +417,15 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	err = tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
-	if err != nil {
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
-		http.Error(ctx.Writer, "send command failed", http.StatusInternalServerError)
+		if !sendReverseCommandErr.IsCustomError() {
+			http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		result := common.ErrorResult(sendReverseCommandErr.Error())
+		ctx.JSON(http.StatusOK, result)
 		return
 	}
 	defer func() {

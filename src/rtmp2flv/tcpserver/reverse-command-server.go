@@ -50,11 +50,12 @@ func ClearReverseCommand(messageId string) (err error) {
 	return
 }
 
-func SendReverseCommand(secret string, rcm ReverseCommandMessage, paramStr string) (err error) {
+func SendReverseCommand(secret string, rcm ReverseCommandMessage, paramStr string) (err *common.Rtmp2FlvCustomError) {
 	_, ok := reverseCommandMessageMap.Load(rcm.MessageId)
 	if ok {
 		logs.Error("MessageId: %s exists", rcm.MessageId)
-		err = fmt.Errorf("MessageId: %s exists", rcm.MessageId)
+		errStr := fmt.Sprintf("MessageId: %s exists", rcm.MessageId)
+		err = common.CustomError(errStr)
 		return
 	}
 	reverseCommandMessageMap.Store(rcm.MessageId, rcm)
@@ -62,7 +63,8 @@ func SendReverseCommand(secret string, rcm ReverseCommandMessage, paramStr strin
 	value, ok := reverseCommandClientMap.Load(rcm.ClientCode)
 	if !ok {
 		logs.Error("reverse conn not exists")
-		err = fmt.Errorf("reverse conn: %s not exists", rcm.ClientCode)
+		errStr := fmt.Sprintf("reverse conn: %s not exists", rcm.ClientCode)
+		err = common.CustomError(errStr)
 		return
 	}
 	conn := value.(net.Conn)
@@ -72,9 +74,10 @@ func SendReverseCommand(secret string, rcm ReverseCommandMessage, paramStr strin
 		MessageId:   rcm.MessageId,
 	}
 
-	_, err = writeCommandMessage(secret, cm, conn)
-	if err != nil {
+	_, writeErr := writeCommandMessage(secret, cm, conn)
+	if writeErr != nil {
 		logs.Error("writeCommandMessage error: %v", err)
+		err = common.InternalError(writeErr)
 		return
 	}
 

@@ -50,7 +50,7 @@ func (r *Publisher) pktTransfer() {
 }
 
 func tee(done <-chan interface{}, in <-chan av.Packet) (<-chan av.Packet, <-chan av.Packet) {
-	//设置缓冲，调节前后速率
+	//设置缓冲
 	out1 := make(chan av.Packet, 1024)
 	out2 := make(chan av.Packet, 1024)
 	go func() {
