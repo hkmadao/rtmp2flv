@@ -45,6 +45,14 @@ func HttpFlvPlay(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, result)
 		return
 	}
+	clientInfo, err := base_service.ClientInfoSelectById(camera.IdClientInfo)
+	if err != nil {
+		logs.Error("ClientInfo query error : %v", err)
+		result := common.ErrorResult("internal error")
+		ctx.JSON(http.StatusBadRequest, result)
+		return
+	}
+	camera.ClientInfo = clientInfo
 	if !(method == "temp" || method == "permanent") {
 		logs.Error("method error : %s", method)
 		result := common.ErrorResult("internal error")
@@ -64,7 +72,7 @@ func HttpFlvPlay(ctx *gin.Context) {
 		}
 		if time.Now().Before(cs.StartTime) || time.Now().After(cs.Deadline) {
 			logs.Error("camera [%s] AuthCodeTemp expired : %s", camera.Code, authCode)
-			result := common.ErrorResult(fmt.Sprintf("auth error"))
+			result := common.ErrorResult("auth error")
 			ctx.JSON(http.StatusBadRequest, result)
 			return
 		}
@@ -72,7 +80,7 @@ func HttpFlvPlay(ctx *gin.Context) {
 	}
 	if method == "permanent" && authCode != camera.PlayAuthCode {
 		logs.Error("AuthCodePermanent error : %s", authCode)
-		result := common.ErrorResult(fmt.Sprintf("auth error"))
+		result := common.ErrorResult("auth error")
 		ctx.JSON(http.StatusBadRequest, result)
 		return
 	}
@@ -82,9 +90,15 @@ func HttpFlvPlay(ctx *gin.Context) {
 	playerDone := make(chan int)
 	defer close(playerDone)
 	const timeout = 10 * time.Second
-	flvPlayerDone, err := flvadmin.GetSingleHttpFlvAdmin().AddHttpFlvPlayer(playerDone, timeout/2, code, ctx.Writer)
-	if err != nil {
-		logs.Error("camera [%s] add player error : %s", code, err)
+	flvPlayerDone, addHttpFlvPlayerErr := flvadmin.GetSingleHttpFlvAdmin().AddHttpFlvPlayer(playerDone, timeout/2, camera, ctx.Writer)
+	if addHttpFlvPlayerErr != nil {
+		logs.Error("camera [%s] add player error : %v", code, addHttpFlvPlayerErr)
+		if addHttpFlvPlayerErr.IsCustomError() {
+			result := common.ErrorResult(addHttpFlvPlayerErr.Error())
+			ctx.JSON(http.StatusBadRequest, result)
+			return
+		}
+
 		result := common.ErrorResult("internal error")
 		ctx.JSON(http.StatusBadRequest, result)
 		return

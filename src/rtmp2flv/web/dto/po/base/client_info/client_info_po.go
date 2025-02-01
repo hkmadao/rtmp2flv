@@ -12,4 +12,6 @@ type ClientInfoPO struct {
 	Secret string `json:"secret"`
 	// 备注:
 	Note string `json:"note"`
+	// 摄像头
+	// Cameras []Camera `json:"cameras"`
 }

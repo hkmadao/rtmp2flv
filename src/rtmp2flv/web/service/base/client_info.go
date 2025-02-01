@@ -59,7 +59,7 @@ func ClientInfoBatchDelete(es []entity.ClientInfo) (i int64, err error) {
 
 func ClientInfoSelectById(id string) (model entity.ClientInfo, err error) {
 	o := orm.NewOrm()
-	model = entity.ClientInfo{IdClientInfo: id}
+	model = entity.ClientInfo{ IdClientInfo: id  }
 
 	err = o.Read(&model)
 

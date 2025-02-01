@@ -50,7 +50,7 @@ func (t *task) offlineCamera() {
 		}
 	}()
 	for {
-		condition := common.GetEmptyCondition()
+		condition := common.GetEqualCondition("fgPassive", false)
 		css, err := base_service.CameraFindCollectionByCondition(condition)
 		if err != nil {
 			logs.Error("query camera error : %v", err)

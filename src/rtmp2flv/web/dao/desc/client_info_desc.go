@@ -47,19 +47,33 @@ func GetClientInfoDesc() *common.EntityDesc {
 		DataType:    "String",
 		ValueType:   "string",
 	}
+	var camerasAttributeInfo = &common.AttributeInfo{
+		ColumnName:                       "",
+		Name:                             "cameras",
+		DisplayName:                      "摄像头",
+		DataType:                         "InternalArray",
+		ValueType:                        "",
+		OutEntityName:                    "Camera",
+		OutEntityPkAttributeName:         "id",
+		OutEntityReversalAttributeName:   "clientInfo",
+		OutEntityIdReversalAttributeName: "idClientInfo",
+	}
 	var entityDesc = &common.EntityDesc{
 		EntityInfo:               entityInfo,
 		PkAttributeInfo:          idClientInfoAttributeInfo,
 		NormalFkIdAttributeInfos: []*common.AttributeInfo{},
 		NormalFkAttributeInfos:   []*common.AttributeInfo{},
-		NormalChildren:           []*common.AttributeInfo{},
-		NormalOne2OneChildren:    []*common.AttributeInfo{},
+		NormalChildren: []*common.AttributeInfo{
+			camerasAttributeInfo,
+		},
+		NormalOne2OneChildren: []*common.AttributeInfo{},
 		AttributeInfoMap: map[string]*common.AttributeInfo{
 			"idClientInfo": idClientInfoAttributeInfo,
 			"clientCode":   clientCodeAttributeInfo,
 			"signSecret":   signSecretAttributeInfo,
 			"secret":       secretAttributeInfo,
 			"note":         noteAttributeInfo,
+			"cameras":      camerasAttributeInfo,
 		},
 	}
 

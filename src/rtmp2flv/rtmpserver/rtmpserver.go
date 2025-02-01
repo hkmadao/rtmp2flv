@@ -10,7 +10,7 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/deepch/vdk/av"
 	"github.com/deepch/vdk/format/rtmp"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmppublisher"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmpserver/rtmppublisher"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
 	ext_controller "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/controller/ext"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dao/entity"

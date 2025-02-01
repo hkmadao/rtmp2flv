@@ -4,6 +4,7 @@ import (
 	"io"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
@@ -14,12 +15,31 @@ import (
 	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
+type SyncMap struct {
+	sync.Map
+	size int32 // 原子计数器，用于跟踪map的大小
+}
+
+func (sm *SyncMap) Store(key, value interface{}) {
+	sm.Map.Store(key, value)
+	atomic.AddInt32(&sm.size, 1) // 每次存储时增加计数器
+}
+
+func (sm *SyncMap) Delete(key interface{}) {
+	sm.Map.Delete(key)
+	atomic.AddInt32(&sm.size, -1) // 每次删除时减少计数器
+}
+
+func (sm *SyncMap) IsEmpty() bool {
+	return atomic.LoadInt32(&sm.size) == 0 // 加载计数器的值并检查是否为0
+}
+
 type HttpFlvManager struct {
 	done      chan int
 	pktStream <-chan av.Packet
 	code      string
 	codecs    []av.CodecData
-	hfws      sync.Map
+	hfws      SyncMap
 }
 
 func (hfm *HttpFlvManager) GetCode() string {
@@ -135,4 +155,8 @@ func (hfm *HttpFlvManager) AddHttpFlvPlayer(
 
 func (hfm *HttpFlvManager) DeleteHFW(sesessionId int64) {
 	hfm.hfws.LoadAndDelete(sesessionId)
+}
+
+func (hfm *HttpFlvManager) IsCameraExistsPlayer() bool {
+	return hfm.hfws.IsEmpty()
 }

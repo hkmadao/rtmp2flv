@@ -12,4 +12,6 @@ type ClientInfo struct {
 	Secret string `orm:"column(secret)" json:"secret"`
 	// 备注:
 	Note string `orm:"column(note)" json:"note"`
+	// 摄像头
+	Cameras []Camera `orm:"-" json:"cameras"`
 }

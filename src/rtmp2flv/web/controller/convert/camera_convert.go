@@ -8,6 +8,7 @@ import (
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dao/entity"
 	camera_po "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dto/po/base/camera"
 	camera_vo "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dto/vo/base/camera"
+	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
 func ConvertPOToCamera(po camera_po.CameraPO) (camera entity.Camera, err error) {
@@ -42,6 +43,40 @@ func ConvertCameraToVO(camera entity.Camera) (vo camera_vo.CameraVO, err error) 
 		err = fmt.Errorf("convertCameraToVO : %v", err)
 		return
 	}
+	clientInfo, err := base_service.ClientInfoSelectById(vo.IdClientInfo)
+	if err != nil {
+		logs.Error("convertCameraToVO : %v", err)
+		err = fmt.Errorf("convertCameraToVO : %v", err)
+		return
+	}
+	var clientInfoVO = camera_vo.ClientInfoVO{}
+	err = common.EntityToVO(clientInfo, &clientInfoVO)
+	if err != nil {
+		logs.Error("convertCameraToVO : %v", err)
+		err = fmt.Errorf("convertCameraToVO : %v", err)
+		return
+	}
+	vo.ClientInfo = clientInfoVO
+	// condition := common.GetEqualCondition("idCamera", vo.Id)
+	// var cameraRecordVOList = make([]camera_vo.CameraRecordVO, 0)
+	// var cameraRecords = make([]entity.CameraRecord, 0)
+	// cameraRecords, err = base_service.CameraRecordFindCollectionByCondition(condition)
+	// if err != nil {
+	// 	logs.Error("convertCameraToVO : %v", err)
+	// 	err = fmt.Errorf("convertCameraToVO : %v", err)
+	// 	return
+	// }
+	// for _, cameraRecord := range cameraRecords {
+	// 	var cameraRecordVO = camera_vo.CameraRecordVO{}
+	// 	err = common.EntityToVO(cameraRecord, &cameraRecordVO)
+	// 	if err != nil {
+	// 		logs.Error("convertCameraToVO : %v", err)
+	// 		err = fmt.Errorf("convertCameraToVO : %v", err)
+	// 		return
+	// 	}
+	// 	cameraRecordVOList = append(cameraRecordVOList, cameraRecordVO)
+	// }
+	// vo.cameraRecords = cameraRecordVOList
 	// condition := common.GetEqualCondition("cameraId", vo.Id)
 	// var cameraShareVOList = make([]camera_vo.CameraShareVO, 0)
 	// var cameraShares = make([]entity.CameraShare, 0)

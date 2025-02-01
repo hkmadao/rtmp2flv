@@ -523,7 +523,7 @@ func makeParamCondition(
 	}
 	valueType, err := getValueType(attr_info)
 	if err != nil {
-		err = fmt.Errorf("make condition error: attr: %s unsupport value type: %s", attr_info.Name, attr_info.ValueType)
+		err = fmt.Errorf("makeParamCondition error: attr: %s unsupport value type: %s", attr_info.Name, attr_info.ValueType)
 		return
 	}
 

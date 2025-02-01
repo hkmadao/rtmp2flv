@@ -42,7 +42,27 @@ func ConvertClientInfoToVO(clientInfo entity.ClientInfo) (vo client_info_vo.Clie
 		err = fmt.Errorf("convertClientInfoToVO : %v", err)
 		return
 	}
-
+	// condition := common.GetEqualCondition("idClientInfo", vo.IdClientInfo)
+	// var cameraVOList = make([]client_info_vo.CameraVO, 0)
+	// var cameras = make([]entity.Camera, 0)
+	// cameras, err = base_service.CameraFindCollectionByCondition(condition)
+	// if err != nil {
+	// 	logs.Error("convertClientInfoToVO : %v", err)
+	// 	err = fmt.Errorf("convertClientInfoToVO : %v", err)
+	// 	return
+	// }
+	// for _, camera := range cameras {
+	// 	var cameraVO = client_info_vo.CameraVO{}
+	// 	err = common.EntityToVO(camera, &cameraVO)
+	// 	if err != nil {
+	// 		logs.Error("convertClientInfoToVO : %v", err)
+	// 		err = fmt.Errorf("convertClientInfoToVO : %v", err)
+	// 		return
+	// 	}
+	// 	cameraVOList = append(cameraVOList, cameraVO)
+	// }
+	// vo.cameras = cameraVOList
+	
 	return
 }
 

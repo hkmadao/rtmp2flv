@@ -33,6 +33,10 @@ type DeleteRefErrorMessageVO struct {
 	RefClassName string `json:"refClassName"`
 }
 
+func (appResult *AppResult) IsFailed() bool {
+	return appResult.Status != 0
+}
+
 func ErrorResult(msg string) AppResult {
 	return AppResult{Status: 1, Message: msg}
 }

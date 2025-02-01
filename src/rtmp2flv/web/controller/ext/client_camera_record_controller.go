@@ -67,6 +67,7 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 		return
 	}
 	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
 		if !sendReverseCommandErr.IsCustomError() {
@@ -77,7 +78,7 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, result)
 		return
 	}
-	defer tcpserver.ClearReverseCommand(messageId)
+
 	select {
 	case resMessage := <-messageChan:
 		// result := common.AppResult{}
@@ -170,6 +171,7 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 		return
 	}
 	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
 		if !sendReverseCommandErr.IsCustomError() {
@@ -179,7 +181,6 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 		http.Error(ctx.Writer, sendReverseCommandErr.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer tcpserver.ClearReverseCommand(messageId)
 Loop:
 	for {
 		select {
@@ -268,6 +269,7 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 		return
 	}
 	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
 		if !sendReverseCommandErr.IsCustomError() {
@@ -278,7 +280,6 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, result)
 		return
 	}
-	defer tcpserver.ClearReverseCommand(messageId)
 	select {
 	case resMessage := <-messageChan:
 		// result := common.AppResult{}
@@ -342,6 +343,7 @@ func ClientCameraAq(ctx *gin.Context) {
 		return
 	}
 	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
 		if !sendReverseCommandErr.IsCustomError() {
@@ -352,7 +354,7 @@ func ClientCameraAq(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, result)
 		return
 	}
-	defer tcpserver.ClearReverseCommand(messageId)
+
 	select {
 	case resMessage := <-messageChan:
 		// result := common.AppResult{}
@@ -418,6 +420,7 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		return
 	}
 	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
 		if !sendReverseCommandErr.IsCustomError() {
@@ -428,9 +431,7 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, result)
 		return
 	}
-	defer func() {
-		tcpserver.ClearReverseCommand(messageId)
-	}()
+
 	select {
 	case resMessage := <-messageChan:
 		// result := common.AppResult{}

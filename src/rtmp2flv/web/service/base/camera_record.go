@@ -118,7 +118,7 @@ func CameraRecordFindCollectionByCondition(condition common.AqCondition) (models
 	// execute the raw query string
 	_, err_query := o.Raw(sqlStr, params...).QueryRows(&models)
 	if err_query != nil {
-		err = fmt.Errorf("findCollectionByCondition error: %v", err_make_sql)
+		err = fmt.Errorf("findCollectionByCondition error: %v", err_query)
 		return
 	}
 	return
