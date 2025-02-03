@@ -18,6 +18,9 @@ func OnlineStatus(cameraCode string) {
 		logs.Error("code: %s find camere error: %v", cameraCode)
 		return
 	}
+	if !camera.Enabled {
+		return
+	}
 	camera.OnlineStatus = true
 	lastReportInfo.Store(cameraCode, time.Now())
 	_, err = base_service.CameraUpdateById(camera)
@@ -31,6 +34,9 @@ func OfflineStatus(cameraCode string) {
 	camera, err := base_service.CameraFindOneByCondition(condition)
 	if err != nil {
 		logs.Error("code: %s find camere error: %v", cameraCode)
+		return
+	}
+	if !camera.Enabled {
 		return
 	}
 	camera.OnlineStatus = false

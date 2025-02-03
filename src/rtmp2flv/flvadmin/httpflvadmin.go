@@ -37,6 +37,10 @@ func (hfa *HttpFlvAdmin) AddHttpFlvManager(
 ) {
 	hfm := httpflvmanage.NewHttpFlvManager(pktStream, code, codecs)
 	hfa.hfms.Store(code, hfm)
+	go func() {
+		<-hfm.GetDone()
+		hfa.hfms.Delete(code)
+	}()
 }
 
 func (hfa *HttpFlvAdmin) StopWrite(code string) {
@@ -67,6 +71,12 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 	camera entity.Camera,
 	writer http.ResponseWriter,
 ) (<-chan int, *common.Rtmp2FlvCustomError) {
+	if !camera.OnlineStatus {
+		return nil, common.CustomError("camera offline")
+	}
+	if !camera.Live {
+		return nil, common.CustomError("camera live disabled")
+	}
 	v, b := hfa.hfms.Load(camera.Code)
 	if b {
 		hfm := v.(*httpflvmanage.HttpFlvManager)
@@ -79,6 +89,7 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 		}
 		return flvPlayerDone, nil
 	} else if camera.FgPassive {
+		logs.Info("camera: %s rtmp push mode is passive, send command", camera.Code)
 		messageId, err := utils.GenerateId()
 		if err != nil {
 			return nil, common.InternalError(err)

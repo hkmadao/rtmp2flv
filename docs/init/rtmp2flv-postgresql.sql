@@ -1,42 +1,34 @@
--- public.camera definition
+-- public.client_info definition
 
 -- Drop table
 
--- DROP TABLE camera;
+-- DROP TABLE public.client_info;
 
-CREATE TABLE camera (
-	code varchar(255) NULL, -- 编号
-	rtmp_auth_code varchar(255) NULL, -- rtmp识别码
-	play_auth_code varchar(255) NULL, -- 播放权限码
-	online_status bool NULL, -- 在线状态
-	enabled bool NULL, -- 启用状态
-	save_video bool NULL, -- 保存录像状态
-	live bool NULL, -- 直播状态
-	created timestamp NULL, -- 创建时间
-	id varchar(255) NOT NULL,
-	CONSTRAINT pk_camera PRIMARY KEY (id)
+CREATE TABLE public.client_info (
+	client_code varchar(255) NULL, -- 编号
+	sign_secret varchar(255) NULL, -- 注册信息签名密钥
+	secret varchar(255) NULL, -- 数据传输加密密钥
+	note varchar(255) NULL, -- 备注
+	id_client_info varchar(255) NOT NULL,
+	CONSTRAINT pk_client_info PRIMARY KEY (id_client_info)
 );
-COMMENT ON TABLE public.camera IS '摄像头';
+COMMENT ON TABLE public.client_info IS '客户端信息';
 
 -- Column comments
 
-COMMENT ON COLUMN public.camera.code IS '编号';
-COMMENT ON COLUMN public.camera.rtmp_auth_code IS 'rtmp识别码';
-COMMENT ON COLUMN public.camera.play_auth_code IS '播放权限码';
-COMMENT ON COLUMN public.camera.online_status IS '在线状态';
-COMMENT ON COLUMN public.camera.enabled IS '启用状态';
-COMMENT ON COLUMN public.camera.save_video IS '保存录像状态';
-COMMENT ON COLUMN public.camera.live IS '直播状态';
-COMMENT ON COLUMN public.camera.created IS '创建时间';
+COMMENT ON COLUMN public.client_info.client_code IS '编号';
+COMMENT ON COLUMN public.client_info.sign_secret IS '注册信息签名密钥';
+COMMENT ON COLUMN public.client_info.secret IS '数据传输加密密钥';
+COMMENT ON COLUMN public.client_info.note IS '备注';
 
 
 -- public.sys_token definition
 
 -- Drop table
 
--- DROP TABLE sys_token;
+-- DROP TABLE public.sys_token;
 
-CREATE TABLE sys_token (
+CREATE TABLE public.sys_token (
 	username varchar(255) NULL, -- 用户名称
 	nick_name varchar(255) NULL, -- 昵称
 	create_time timestamp NULL, -- 创建时间
@@ -62,9 +54,9 @@ COMMENT ON COLUMN public.sys_token.user_info_string IS '用户信息序列化';
 
 -- Drop table
 
--- DROP TABLE sys_user;
+-- DROP TABLE public.sys_user;
 
-CREATE TABLE sys_user (
+CREATE TABLE public.sys_user (
 	account varchar(255) NULL, -- 登录账号 
 	user_pwd varchar(255) NULL, -- 用户密码 
 	phone varchar(255) NULL, -- 手机号码
@@ -90,43 +82,53 @@ COMMENT ON COLUMN public.sys_user.gender IS '性别';
 COMMENT ON COLUMN public.sys_user.fg_active IS '启用标志';
 
 
--- public.camera_share definition
+-- public.camera definition
 
 -- Drop table
 
--- DROP TABLE camera_share;
+-- DROP TABLE public.camera;
 
-CREATE TABLE camera_share (
-	"name" varchar(255) NULL, -- 名称
-	auth_code varchar(255) NULL, -- 权限码
+CREATE TABLE public.camera (
+	code varchar(255) NULL, -- 编号
+	rtmp_auth_code varchar(255) NULL, -- rtmp识别码
+	play_auth_code varchar(255) NULL, -- 播放权限码
+	online_status bool NULL, -- 在线状态
 	enabled bool NULL, -- 启用状态
+	save_video bool NULL, -- 保存录像状态
+	live bool NULL, -- 直播状态
 	created timestamp NULL, -- 创建时间
-	start_time timestamp NULL, -- 开始时间
-	deadline timestamp NULL, -- 结束时间
-	camera_id varchar(255) NOT NULL, -- 摄像头id
 	id varchar(255) NOT NULL,
-	CONSTRAINT pk_camera_share PRIMARY KEY (id),
-	CONSTRAINT camera_share_camera_id_fkey FOREIGN KEY (camera_id) REFERENCES camera(id)
+	fg_secret bool NULL DEFAULT false, -- 加密标志
+	secret varchar NULL, -- 密钥
+	fg_passive bool NULL DEFAULT false, -- 被动推送rtmp标志
+	id_client_info varchar NULL,
+	CONSTRAINT pk_camera PRIMARY KEY (id),
+	CONSTRAINT camera_fk FOREIGN KEY (id_client_info) REFERENCES public.client_info(id_client_info)
 );
-COMMENT ON TABLE public.camera_share IS '摄像头分享';
+COMMENT ON TABLE public.camera IS '摄像头';
 
 -- Column comments
 
-COMMENT ON COLUMN public.camera_share."name" IS '名称';
-COMMENT ON COLUMN public.camera_share.auth_code IS '权限码';
-COMMENT ON COLUMN public.camera_share.enabled IS '启用状态';
-COMMENT ON COLUMN public.camera_share.created IS '创建时间';
-COMMENT ON COLUMN public.camera_share.start_time IS '开始时间';
-COMMENT ON COLUMN public.camera_share.deadline IS '结束时间';
-COMMENT ON COLUMN public.camera_share.camera_id IS '摄像头id';
+COMMENT ON COLUMN public.camera.code IS '编号';
+COMMENT ON COLUMN public.camera.rtmp_auth_code IS 'rtmp识别码';
+COMMENT ON COLUMN public.camera.play_auth_code IS '播放权限码';
+COMMENT ON COLUMN public.camera.online_status IS '在线状态';
+COMMENT ON COLUMN public.camera.enabled IS '启用状态';
+COMMENT ON COLUMN public.camera.save_video IS '保存录像状态';
+COMMENT ON COLUMN public.camera.live IS '直播状态';
+COMMENT ON COLUMN public.camera.created IS '创建时间';
+COMMENT ON COLUMN public.camera.fg_secret IS '加密标志';
+COMMENT ON COLUMN public.camera.secret IS '密钥';
+COMMENT ON COLUMN public.camera.fg_passive IS '被动推送rtmp标志';
+
 
 -- public.camera_record definition
 
 -- Drop table
 
--- DROP TABLE camera_record;
+-- DROP TABLE public.camera_record;
 
-CREATE TABLE camera_record (
+CREATE TABLE public.camera_record (
 	id_camera_record varchar(255) NOT NULL,
 	created timestamp NULL, -- 创建时间
 	temp_file_name varchar(255) NULL, -- 临时文件名称
@@ -138,7 +140,8 @@ CREATE TABLE camera_record (
 	end_time timestamp NULL, -- 结束时间
 	id_camera varchar(255) NOT NULL, -- 摄像头主属性
 	has_audio bool NULL, -- 是否有音频
-	CONSTRAINT pk_camera_record PRIMARY KEY (id_camera_record)
+	CONSTRAINT pk_camera_record PRIMARY KEY (id_camera_record),
+	CONSTRAINT camera_record_fk FOREIGN KEY (id_camera) REFERENCES public.camera(id)
 );
 COMMENT ON TABLE public.camera_record IS '摄像头记录';
 
@@ -155,25 +158,33 @@ COMMENT ON COLUMN public.camera_record.end_time IS '结束时间';
 COMMENT ON COLUMN public.camera_record.id_camera IS '摄像头主属性';
 COMMENT ON COLUMN public.camera_record.has_audio IS '是否有音频';
 
--- public.client_info definition
+
+-- public.camera_share definition
 
 -- Drop table
 
--- DROP TABLE client_info;
+-- DROP TABLE public.camera_share;
 
-CREATE TABLE client_info (
-	client_code varchar(255) NULL, -- 编号
-	sign_secret varchar(255) NULL, -- 注册信息签名密钥
-	secret varchar(255) NULL, -- 数据传输加密密钥
-	note varchar(255) NULL, -- 备注
-	id_client_info varchar(255) NOT NULL,
-	CONSTRAINT pk_client_info PRIMARY KEY (id_client_info)
+CREATE TABLE public.camera_share (
+	"name" varchar(255) NULL, -- 名称
+	auth_code varchar(255) NULL, -- 权限码
+	enabled bool NULL, -- 启用状态
+	created timestamp NULL, -- 创建时间
+	start_time timestamp NULL, -- 开始时间
+	deadline timestamp NULL, -- 结束时间
+	camera_id varchar(255) NOT NULL, -- 摄像头id
+	id varchar(255) NOT NULL,
+	CONSTRAINT pk_camera_share PRIMARY KEY (id),
+	CONSTRAINT camera_share_camera_id_fkey FOREIGN KEY (camera_id) REFERENCES public.camera(id)
 );
-COMMENT ON TABLE public.client_info IS '客户端信息';
+COMMENT ON TABLE public.camera_share IS '摄像头分享';
 
 -- Column comments
 
-COMMENT ON COLUMN public.client_info.client_code IS '编号';
-COMMENT ON COLUMN public.client_info.sign_secret IS '注册信息签名密钥';
-COMMENT ON COLUMN public.client_info.secret IS '数据传输加密密钥';
-COMMENT ON COLUMN public.client_info.note IS '备注';
+COMMENT ON COLUMN public.camera_share."name" IS '名称';
+COMMENT ON COLUMN public.camera_share.auth_code IS '权限码';
+COMMENT ON COLUMN public.camera_share.enabled IS '启用状态';
+COMMENT ON COLUMN public.camera_share.created IS '创建时间';
+COMMENT ON COLUMN public.camera_share.start_time IS '开始时间';
+COMMENT ON COLUMN public.camera_share.deadline IS '结束时间';
+COMMENT ON COLUMN public.camera_share.camera_id IS '摄像头id';
