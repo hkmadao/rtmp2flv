@@ -5,9 +5,10 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/flvadmin"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/flvadmin/fileflvmanager/fileflvreader"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/rtmpserver"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/tcpserver/reportcamerastatus"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
 	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
@@ -29,6 +30,7 @@ func (t *task) StartTask() {
 	go t.clearToken()
 	go t.offlineCamera()
 	go t.ClearHistoryVideo()
+	go t.SendStopRtmpPush()
 }
 
 func (t *task) clearToken() {
@@ -38,7 +40,6 @@ func (t *task) clearToken() {
 		}
 	}()
 	for {
-		web.ClearExipresToken()
 		<-time.After(24 * time.Hour)
 	}
 }
@@ -50,13 +51,17 @@ func (t *task) offlineCamera() {
 		}
 	}()
 	for {
-		condition := common.GetEqualCondition("fgPassive", false)
+		condition := common.GetEqualCondition("onlineStatus", true)
 		css, err := base_service.CameraFindCollectionByCondition(condition)
 		if err != nil {
 			logs.Error("query camera error : %v", err)
 		}
 		for _, cs := range css {
-			if !cs.OnlineStatus {
+			if cs.FgPassive {
+				if expires := reportcamerastatus.CheckExpires(cs.Code); !expires {
+					cs.OnlineStatus = false
+					base_service.CameraUpdateById(cs)
+				}
 				continue
 			}
 			if exists := rtmpserver.GetSingleRtmpServer().ExistsPublisher(cs.Code); !exists {
@@ -93,6 +98,18 @@ func (t *task) ClearHistoryVideo() {
 				base_service.CameraRecordDelete(cs)
 			}
 		}
+		<-time.After(10 * time.Minute)
+	}
+}
+
+func (t *task) SendStopRtmpPush() {
+	defer func() {
+		if r := recover(); r != nil {
+			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
+		}
+	}()
+	for {
+		flvadmin.GetSingleHttpFlvAdmin().TickerCheckStopRtmp()
 		<-time.After(10 * time.Minute)
 	}
 }

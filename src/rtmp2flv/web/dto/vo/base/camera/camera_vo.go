@@ -11,7 +11,7 @@ type CameraVO struct {
 	// 编号:
 	Code string `json:"code"`
 	// rtmp识别码:
-	RtmpAuthCode string `json:"RtmpAuthCode"`
+	RtmpAuthCode string `json:"rtmpAuthCode"`
 	// 播放权限码:
 	PlayAuthCode string `json:"playAuthCode"`
 	// 在线状态:

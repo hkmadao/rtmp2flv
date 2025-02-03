@@ -28,7 +28,7 @@ func GetCameraDesc() *common.EntityDesc {
 	}
 	var RtmpAuthCodeAttributeInfo = &common.AttributeInfo{
 		ColumnName:  "rtmp_auth_code",
-		Name:        "RtmpAuthCode",
+		Name:        "rtmpAuthCode",
 		DisplayName: "rtmp识别码",
 		DataType:    "String",
 		ValueType:   "string",
@@ -157,7 +157,7 @@ func GetCameraDesc() *common.EntityDesc {
 		AttributeInfoMap: map[string]*common.AttributeInfo{
 			"id":            idAttributeInfo,
 			"code":          codeAttributeInfo,
-			"RtmpAuthCode":  RtmpAuthCodeAttributeInfo,
+			"rtmpAuthCode":  RtmpAuthCodeAttributeInfo,
 			"playAuthCode":  playAuthCodeAttributeInfo,
 			"onlineStatus":  onlineStatusAttributeInfo,
 			"enabled":       enabledAttributeInfo,

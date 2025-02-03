@@ -20,9 +20,10 @@ type RegisterInfo struct {
 	ClientCode string `json:"clientCode"`
 	DateStr    string `json:"dateStr"`
 	Sign       string `json:"sign"`
-	// "keepChannel" "cameraAq" "historyVideoPage" "flvFileMediaInfo" "flvPlay" "flvFetchMoreData" "startPushRtmp" "stopPushRtmp"
-	ConnType  string `json:"connType"`
-	MessageId string `json:"messageId"`
+	// "keepChannel" "cameraOnline" "cameraOffline" "cameraAq" "historyVideoPage" "flvFileMediaInfo" "flvPlay" "flvFetchMoreData" "startPushRtmp" "stopPushRtmp"
+	ConnType   string `json:"connType"`
+	MessageId  string `json:"messageId"`
+	CameraCode string `json:"cameraCode"`
 }
 
 func writeCommandMessage(secretStr string, commandMessage CommandMessage, writer io.Writer) (n int, err error) {

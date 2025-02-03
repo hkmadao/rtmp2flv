@@ -3,14 +3,15 @@ package entity
 import (
 	"time"
 )
+
 // 摄像头
 type Camera struct {
 	// 摄像头主属性
-	Id string  `orm:"pk;column(id)" json:"id"`
+	Id string `orm:"pk;column(id)" json:"id"`
 	// 编号:
 	Code string `orm:"column(code)" json:"code"`
 	// rtmp识别码:
-	RtmpAuthCode string `orm:"column(rtmp_auth_code)" json:"RtmpAuthCode"`
+	RtmpAuthCode string `orm:"column(rtmp_auth_code)" json:"rtmpAuthCode"`
 	// 播放权限码:
 	PlayAuthCode string `orm:"column(play_auth_code)" json:"playAuthCode"`
 	// 在线状态:

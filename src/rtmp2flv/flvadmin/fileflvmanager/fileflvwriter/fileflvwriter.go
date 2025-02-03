@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 	"runtime/debug"
-	"strings"
+	"sync"
 	"time"
 
 	"github.com/beego/beego/v2/core/config"
@@ -14,6 +14,7 @@ import (
 	"github.com/deepch/vdk/format/flv"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dao/entity"
 	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
@@ -22,20 +23,24 @@ type IFileFlvManager interface {
 }
 
 type FileFlvWriter struct {
-	sessionId   int64
-	done        chan int
-	fgDoneClose bool
-	tickerDone  chan int
-	pktStream   chan av.Packet
-	code        string
-	codecs      []av.CodecData
-	isStart     bool
-	fd          *os.File
-	fileName    string
-	muxer       *flv.Muxer
-	startTime   time.Time
-	endTime     time.Time
-	ffm         IFileFlvManager
+	sessionId    int64
+	done         chan int
+	fgDoneClose  bool
+	tickerDone   chan int
+	pktStream    chan av.Packet
+	code         string
+	codecs       []av.CodecData
+	isStart      bool
+	fd           *os.File
+	fileName     string
+	tempFileName string
+	// fullFileName    string
+	muxer     *flv.Muxer
+	startTime time.Time
+	endTime   time.Time
+	ffm       IFileFlvManager
+	idCamera  string
+	mutex     sync.Mutex
 }
 
 func (ffw *FileFlvWriter) GetDone() <-chan int {
@@ -81,30 +86,7 @@ func NewFileFlvWriter(
 		isStart:     false,
 		ffm:         ffm,
 	}
-	condition := common.GetEqualCondition("code", code)
-	camera, err := base_service.CameraFindOneByCondition(condition)
-	if err != nil {
-		logs.Error("query camera error : %v", err)
-		return ffw
-	}
-	if !camera.OnlineStatus {
-		return ffw
-	}
-	if !camera.SaveVideo {
-		go func() {
-			for {
-				select {
-				case <-ffw.GetDone():
-					return
-				case _, ok := <-ffw.pktStream:
-					if !ok {
-						return
-					}
-				}
-			}
-		}()
-		return ffw
-	}
+
 	go ffw.flvWrite()
 	return ffw
 }
@@ -117,9 +99,17 @@ func (ffw *FileFlvWriter) StopWrite() {
 			}
 		}()
 		ffw.ffm.DeleteFFW(ffw.sessionId)
+		ffw.CloseDone()
+	}()
+}
+
+func (ffw *FileFlvWriter) CloseDone() {
+	ffw.mutex.Lock()
+	if !ffw.fgDoneClose {
 		ffw.fgDoneClose = true
 		close(ffw.done)
-	}()
+	}
+	ffw.mutex.Unlock()
 }
 
 func (ffw *FileFlvWriter) TickerStopWrite() {
@@ -132,8 +122,7 @@ func (ffw *FileFlvWriter) TickerStopWrite() {
 		select {
 		case <-time.NewTicker(30 * time.Second).C: //等待30秒再关闭
 			ffw.ffm.DeleteFFW(ffw.sessionId)
-			ffw.fgDoneClose = true
-			close(ffw.done)
+			ffw.CloseDone()
 		case <-ffw.GetDone():
 		}
 	}()
@@ -153,14 +142,19 @@ func (ffw *FileFlvWriter) Write(p []byte) (n int, err error) {
 }
 
 func (ffw *FileFlvWriter) createFlvFile() error {
-	fileName := getFileFlvPath() + "/" + ffw.code + "_" + time.Now().Format("20060102150405") + "_temp.flv"
-	fd, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
+	fileNamePre := ffw.code + "_" + time.Now().Format("2006-01-02_15-04-05")
+	fileName := fileNamePre + ".flv"
+	tempFileName := fileNamePre + "_temp.flv"
+	fullFileName := getFileFlvPath() + "/" + tempFileName
+	fd, err := os.OpenFile(fullFileName, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		logs.Error("open file error :", err)
 		return err
 	}
 	ffw.fd = fd
 	ffw.fileName = fileName
+	ffw.tempFileName = tempFileName
+	// ffw.fullFileName = fullFileName
 	return nil
 }
 
@@ -171,6 +165,32 @@ func (ffw *FileFlvWriter) flvWrite() {
 			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
 		}
 	}()
+	defer func() {
+		ffw.CloseDone()
+	}()
+	condition := common.GetEqualCondition("code", ffw.code)
+	camera, err := base_service.CameraFindOneByCondition(condition)
+	if err != nil {
+		logs.Error("query camera error : %v", err)
+		return
+	}
+	if !camera.OnlineStatus {
+		return
+	}
+	if !camera.SaveVideo {
+		for {
+			select {
+			case <-ffw.GetDone():
+				return
+			case _, ok := <-ffw.pktStream:
+				if !ok {
+					return
+				}
+			}
+		}
+	}
+	ffw.idCamera = camera.Id
+
 	if err := ffw.createFlvFile(); err != nil {
 		logs.Error("create file flv error : %v", err)
 		return
@@ -182,10 +202,6 @@ func (ffw *FileFlvWriter) flvWrite() {
 
 		//写入script tag data，主要补充视频的总时长，否则使用播放器播放看不到视频总时长
 		ffw.writeScriptTagData()
-
-		if !ffw.fgDoneClose {
-			close(ffw.done)
-		}
 	}()
 
 	muxer := flv.NewMuxer(ffw)
@@ -210,6 +226,26 @@ func (ffw *FileFlvWriter) flvWrite() {
 				ffw.isStart = false
 			}
 			ffw.startTime = time.Now()
+			idCameraRecord, err := utils.GenerateId()
+			if err != nil {
+				logs.Error("generate camera record id error : %v", err)
+			}
+
+			var cameraRecord = entity.CameraRecord{
+				IdCameraRecord: idCameraRecord,
+				IdCamera:       ffw.idCamera,
+				Created:        ffw.startTime,
+				StartTime:      ffw.startTime,
+				FileName:       ffw.fileName,
+				TempFileName:   ffw.tempFileName,
+				FgTemp:         true,
+				FgRemove:       false,
+				Duration:       0,
+			}
+			_, err = base_service.CameraRecordCreate(cameraRecord)
+			if err != nil {
+				logs.Error("save camera record error : %v", err)
+			}
 			continue
 		}
 		if time.Now().Local().After(timeNow.Add(1 * time.Minute)) {
@@ -220,15 +256,23 @@ func (ffw *FileFlvWriter) flvWrite() {
 }
 
 func (ffw *FileFlvWriter) writeScriptTagData() {
-	reverseFileName := utils.ReverseString(ffw.fileName)
-	reverseNewFileName := strings.Replace(reverseFileName, utils.ReverseString("_temp.flv"), utils.ReverseString(".flv"), 1)
-	newFileName := utils.ReverseString(reverseNewFileName)
-	newflvFile, err := os.OpenFile(newFileName, os.O_RDWR|os.O_CREATE, 0644)
+	var filters = []common.EqualFilter{{Name: "idCamera", Value: ffw.idCamera}, {Name: "tempFileName", Value: ffw.tempFileName}}
+	condition := common.GetEqualConditions(filters)
+	cameraRecord, err := base_service.CameraRecordFindOneByCondition(condition)
+	if err != nil {
+		logs.Error("writeScriptTagData find CameraRecord error :", err)
+		return
+	}
+
+	fullFileName := getFileFlvPath() + "/" + cameraRecord.FileName
+	newflvFile, err := os.OpenFile(fullFileName, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		logs.Error("create flv file error :", err)
 		return
 	}
-	flvFile, err := os.OpenFile(ffw.fileName, os.O_RDWR, 0644)
+
+	tempFullFileName := getFileFlvPath() + "/" + cameraRecord.TempFileName
+	flvFile, err := os.OpenFile(tempFullFileName, os.O_RDWR, 0644)
 	if err != nil {
 		logs.Error("open file error :", err)
 		return
@@ -269,9 +313,17 @@ func (ffw *FileFlvWriter) writeScriptTagData() {
 		logs.Error("close template flv file error :", err)
 		return
 	}
-	err = os.Remove(ffw.fileName)
+	err = os.Remove(tempFullFileName)
 	if err != nil {
 		logs.Error("remove template flv file error :", err)
+		return
+	}
+	cameraRecord.Duration = uint32(ffw.endTime.Sub(ffw.startTime).Milliseconds())
+	cameraRecord.FgTemp = false
+	cameraRecord.EndTime = ffw.endTime
+	_, err = base_service.CameraRecordUpdateById(cameraRecord)
+	if err != nil {
+		logs.Error("CameraRecordUpdateById error :", err)
 		return
 	}
 }

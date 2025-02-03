@@ -9,8 +9,6 @@ import (
 	"github.com/deepch/vdk/av"
 	"github.com/deepch/vdk/format/flv"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
-	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
-	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
 type IHttpFlvManager interface {
@@ -81,31 +79,6 @@ func NewHttpFlvWriter(
 		start:             false,
 	}
 
-	condition := common.GetEqualCondition("code", code)
-	camera, err := base_service.CameraFindOneByCondition(condition)
-	if err != nil {
-		logs.Error("query camera error : %v", err)
-		return hfw
-	}
-	if !camera.OnlineStatus {
-		return hfw
-	}
-	if !camera.Live {
-		go func() {
-			for {
-				select {
-				case <-hfw.GetDone():
-					return
-				case _, ok := <-hfw.pktStream:
-					if !ok {
-						return
-					}
-				}
-			}
-		}()
-		return hfw
-	}
-
 	go hfw.httpWrite()
 	return hfw
 }
@@ -119,6 +92,7 @@ func (hfw *HttpFlvWriter) httpWrite() {
 
 	ticker := time.NewTicker(hfw.pulseInterval)
 	defer func() {
+		hfw.ihfm.DeleteHFW(hfw.sessionId)
 		close(hfw.done)
 	}()
 	pktStream := utils.OrDonePacket(hfw.playerDone, hfw.pktStream)

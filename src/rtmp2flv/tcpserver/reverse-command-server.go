@@ -10,6 +10,7 @@ import (
 
 	"github.com/beego/beego/v2/core/config"
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/tcpserver/reportcamerastatus"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
 	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
@@ -148,8 +149,8 @@ func handleConn(conn net.Conn) {
 		return
 	}
 	// validate sign
-	conditon := common.GetEqualCondition("clientCode", registerInfo.ClientCode)
-	clientInfo, err := base_service.ClientInfoFindOneByCondition(conditon)
+	condition := common.GetEqualCondition("clientCode", registerInfo.ClientCode)
+	clientInfo, err := base_service.ClientInfoFindOneByCondition(condition)
 	if err != nil {
 		logs.Error("ClientInfoFindOneByCondition error: %v", err)
 		return
@@ -184,6 +185,10 @@ func handleConn(conn net.Conn) {
 		}
 		logs.Info("keepChannel: %s connect", registerInfo.ClientCode)
 		reverseCommandClientMap.Store(registerInfo.ClientCode, conn)
+	} else if registerInfo.ConnType == "cameraOnline" {
+		reportcamerastatus.OnlineStatus(registerInfo.CameraCode)
+	} else if registerInfo.ConnType == "cameraOffline" {
+		reportcamerastatus.OfflineStatus(registerInfo.CameraCode)
 	} else if registerInfo.ConnType == "flvPlay" {
 		value, ok := reverseCommandMessageMap.Load(registerInfo.MessageId)
 		if !ok {

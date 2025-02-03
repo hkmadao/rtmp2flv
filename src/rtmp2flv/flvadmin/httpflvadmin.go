@@ -13,6 +13,7 @@ import (
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dao/entity"
+	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
 var hfas *HttpFlvAdmin
@@ -70,7 +71,13 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 	if b {
 		hfm := v.(*httpflvmanage.HttpFlvManager)
 		flvPlayerDone, err := hfm.AddHttpFlvPlayer(playerDone, pulseInterval, writer)
-		return flvPlayerDone, common.InternalError(err)
+		if err != nil {
+			return flvPlayerDone, common.InternalError(err)
+		}
+		if camera.FgPassive {
+			go checkStopPushRtmp(flvPlayerDone, hfm, camera)
+		}
+		return flvPlayerDone, nil
 	} else if camera.FgPassive {
 		messageId, err := utils.GenerateId()
 		if err != nil {
@@ -119,10 +126,13 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 				if b {
 					hfm := v.(*httpflvmanage.HttpFlvManager)
 					flvPlayerDone, err := hfm.AddHttpFlvPlayer(playerDone, pulseInterval, writer)
-					go checkStoppPushRtm(flvPlayerDone, hfm, camera)
-					return flvPlayerDone, common.InternalError(err)
+					if err != nil {
+						return flvPlayerDone, common.InternalError(err)
+					}
+					go checkStopPushRtmp(flvPlayerDone, hfm, camera)
+					return flvPlayerDone, nil
 				}
-				if count > 30 {
+				if count >= 59 {
 					return nil, common.CustomError("client start push rtmp success, but the server not found rtmp connection")
 				}
 			}
@@ -135,8 +145,12 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 }
 
 // check exists player, stop client rtmp push
-func checkStoppPushRtm(flvPlayerDone <-chan int, hfm *httpflvmanage.HttpFlvManager, camera entity.Camera) {
+func checkStopPushRtmp(flvPlayerDone <-chan int, hfm *httpflvmanage.HttpFlvManager, camera entity.Camera) {
 	<-flvPlayerDone
+	checkStop(camera.Code, hfm)
+}
+
+func checkStop(cameraCode string, hfm *httpflvmanage.HttpFlvManager) {
 	// first check
 	existsPlayer := hfm.IsCameraExistsPlayer()
 	if !existsPlayer {
@@ -144,9 +158,21 @@ func checkStoppPushRtm(flvPlayerDone <-chan int, hfm *httpflvmanage.HttpFlvManag
 		// sencod check
 		existsPlayer = hfm.IsCameraExistsPlayer()
 		if !existsPlayer {
+			conditon := common.GetEqualCondition("code", cameraCode)
+			camera, err := base_service.CameraFindOneByCondition(conditon)
+			if err != nil {
+				logs.Error("camera query error : %v", err)
+				return
+			}
+			clientInfo, err := base_service.ClientInfoSelectById(camera.IdClientInfo)
+			if err != nil {
+				logs.Error("ClientInfo query error : %v", err)
+				return
+			}
+			camera.ClientInfo = clientInfo
 			messageId, err := utils.GenerateId()
 			if err != nil {
-				logs.Error("checkStoppPushRtm: %v", err)
+				logs.Error("TickerCheckStopRtmp: %v", err)
 			}
 			messageChan := make(chan *tcpserver.ResMessage)
 			rcm := tcpserver.ReverseCommandMessage{
@@ -159,12 +185,12 @@ func checkStoppPushRtm(flvPlayerDone <-chan int, hfm *httpflvmanage.HttpFlvManag
 			param := RtmpPushParam{CameraCode: camera.Code}
 			paramBytes, err := json.Marshal(param)
 			if err != nil {
-				logs.Error("checkStoppPushRtm: %v", err)
+				logs.Error("TickerCheckStopRtmp: %v", err)
 			}
 			sendReverseCommandErr := tcpserver.SendReverseCommand(camera.ClientInfo.Secret, rcm, string(paramBytes))
 			defer tcpserver.ClearReverseCommand(messageId)
 			if sendReverseCommandErr != nil {
-				logs.Error("checkStoppPushRtm: %v", sendReverseCommandErr)
+				logs.Error("TickerCheckStopRtmp: %v", sendReverseCommandErr)
 				return
 			}
 			select {
@@ -172,15 +198,15 @@ func checkStoppPushRtm(flvPlayerDone <-chan int, hfm *httpflvmanage.HttpFlvManag
 				result := common.AppResult{}
 				err := json.Unmarshal(*resMessage.Data, &result)
 				if err != nil {
-					logs.Error("checkStoppPushRtm: %v", err)
+					logs.Error("TickerCheckStopRtmp: %v", err)
 					return
 				}
 				if result.IsFailed() {
-					logs.Error("checkStoppPushRtm client stop push rtmp failed")
+					logs.Error("TickerCheckStopRtmp client stop push rtmp failed")
 					return
 				}
 			case <-time.NewTicker(1 * time.Minute).C:
-				logs.Error("checkStoppPushRtm read form client time out")
+				logs.Error("TickerCheckStopRtmp read form client time out")
 				return
 			}
 		}
@@ -194,4 +220,12 @@ func (hfa *HttpFlvAdmin) UpdateCodecs(code string, codecs []av.CodecData) {
 		rfw := rfw.(*httpflvmanage.HttpFlvManager)
 		rfw.SetCodecs(codecs)
 	}
+}
+
+func (hfa *HttpFlvAdmin) TickerCheckStopRtmp() {
+	hfa.hfms.Range(func(key, value interface{}) bool {
+		hfm := value.(*httpflvmanage.HttpFlvManager)
+		go checkStop(key.(string), hfm)
+		return true
+	})
 }

@@ -199,8 +199,10 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 	if err != nil {
 		logs.Error("no camera error : %s", code)
 	} else {
-		camera.OnlineStatus = false
-		base_service.CameraUpdateById(camera)
+		if !camera.FgPassive {
+			camera.OnlineStatus = false
+			base_service.CameraUpdateById(camera)
+		}
 	}
 
 	r.rms.Delete(code)
