@@ -1,6 +1,7 @@
 package rtmpserver
 
 import (
+	"fmt"
 	"runtime/debug"
 	"strconv"
 	"sync"
@@ -15,28 +16,28 @@ import (
 	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
-var rtmpserverInstance *rtmpServer
+var encryptRtmpserverInstance *encryptRtmpServer
 
 func init() {
-	rtmpserverInstance = &rtmpServer{}
+	encryptRtmpserverInstance = &encryptRtmpServer{}
 }
 
-type rtmpServer struct {
+type encryptRtmpServer struct {
 	rms   sync.Map
 	conns sync.Map
 }
 
-func GetSingleRtmpServer() *rtmpServer {
-	return rtmpserverInstance
+func GetSingleEncryptRtmpServer() *encryptRtmpServer {
+	return encryptRtmpserverInstance
 }
 
-func (rs *rtmpServer) StartRtmpServer() {
+func (rs *encryptRtmpServer) StartRtmpServer() {
 	go rs.startRtmp()
 	done := make(chan interface{})
 	go rs.stopConn(done, ext_controller.CodeStream())
 }
 
-func (rs *rtmpServer) ExistsPublisher(code string) bool {
+func (rs *encryptRtmpServer) ExistsPublisher(code string) bool {
 	exists := false
 	rs.rms.Range(func(key, value interface{}) bool {
 		codeKey := key.(string)
@@ -49,7 +50,7 @@ func (rs *rtmpServer) ExistsPublisher(code string) bool {
 	return exists
 }
 
-func (rs *rtmpServer) stopConn(done <-chan interface{}, codeStream <-chan string) {
+func (rs *encryptRtmpServer) stopConn(done <-chan interface{}, codeStream <-chan string) {
 	defer func() {
 		if r := recover(); r != nil {
 			logs.Error("system painc : %v \nstack : %v", r, string(debug.Stack()))
@@ -75,28 +76,45 @@ func (rs *rtmpServer) stopConn(done <-chan interface{}, codeStream <-chan string
 
 }
 
-func (r *rtmpServer) startRtmp() {
+func (r *encryptRtmpServer) startRtmp() {
 	defer func() {
 		if recover_rusult := recover(); recover_rusult != nil {
 			logs.Error("system painc : %v \nstack : %v", recover_rusult, string(debug.Stack()))
 		}
 	}()
-	rtmpPort, err := config.Int("server.rtmp.port")
+	secretRtmpPort, err := config.Int("server.rtmp.secret-port")
 	if err != nil {
-		logs.Error("get rtmp port fail : %v", err)
+		logs.Error("get rtmp secret-port fail : %v", err)
 		return
 	}
 	// rtmp.Debug = true
 	s := &rtmp.Server{
-		Addr:       ":" + strconv.Itoa(rtmpPort),
+		Addr:       ":" + strconv.Itoa(secretRtmpPort),
 		HandleConn: r.handleRtmpConn,
 	}
+	s.SetEncryptInfo(rtmp.AES, getClientInfo)
+
 	if err := s.ListenAndServe(); err != nil {
 		logs.Error("encrypt rtmp ListenAndServe error: %v", err)
 	}
 }
 
-func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
+func getClientInfo(clientCode string) (rtmpClientInfo *rtmp.ClientInfo, err error) {
+	condition := common.GetEqualCondition("clientCode", clientCode)
+	clientInfo, err := base_service.ClientInfoFindOneByCondition(condition)
+	if err != nil {
+		err = fmt.Errorf("find clientInfo by code: %s error : %v", clientCode, err)
+		return
+	}
+	rtmpClientInfo = &rtmp.ClientInfo{
+		ClientCode: clientInfo.ClientCode,
+		SignSecret: clientInfo.SignSecret,
+		Secret:     clientInfo.Secret,
+	}
+	return
+}
+
+func (r *encryptRtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 	defer func() {
 		if recover_rusult := recover(); recover_rusult != nil {
 			logs.Error("HandleConn error : %v", recover_rusult)
@@ -131,7 +149,7 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 		return
 	}
 
-	if camera.FgSecret {
+	if !camera.FgSecret {
 		logs.Error("camera: %s fgSecret is %b", code, camera.FgSecret)
 		return
 	}
@@ -213,4 +231,14 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 		logs.Error("close conn error : %v", err)
 	}
 
+}
+
+func (r *encryptRtmpServer) Load(key interface{}) (interface{}, bool) {
+	return r.rms.Load(key)
+}
+func (r *encryptRtmpServer) Store(key, value interface{}) {
+	r.rms.Store(key, value)
+}
+func (r *encryptRtmpServer) Delete(key interface{}) {
+	r.rms.Delete(key)
 }

@@ -11,4 +11,4 @@ require (
 	github.com/matoous/go-nanoid/v2 v2.1.0
 )
 
-replace github.com/deepch/vdk => github.com/hkmadao/vdk v0.0.0-20241127071358-df60b9bc5ae8
+replace github.com/deepch/vdk => github.com/hkmadao/vdk v0.0.0-20250204160314-c07ed611e735

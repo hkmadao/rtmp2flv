@@ -234,9 +234,17 @@ func (hfa *HttpFlvAdmin) UpdateCodecs(code string, codecs []av.CodecData) {
 }
 
 func (hfa *HttpFlvAdmin) TickerCheckStopRtmp() {
-	hfa.hfms.Range(func(key, value interface{}) bool {
+	condition := common.GetEqualConditions([]common.EqualFilter{{Name: "onlineStatus", Value: true}, {Name: "fgPassive", Value: true}})
+	css, err := base_service.CameraFindCollectionByCondition(condition)
+	if err != nil {
+		logs.Error("query camera error : %v", err)
+	}
+	for _, cs := range css {
+		value, ok := hfa.hfms.Load(cs.Code)
+		if !ok {
+			continue
+		}
 		hfm := value.(*httpflvmanage.HttpFlvManager)
-		go checkStop(key.(string), hfm)
-		return true
-	})
+		go checkStop(cs.Code, hfm)
+	}
 }

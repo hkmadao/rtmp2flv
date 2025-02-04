@@ -64,6 +64,13 @@ func (t *task) offlineCamera() {
 				}
 				continue
 			}
+			if cs.FgSecret {
+				if exists := rtmpserver.GetSingleEncryptRtmpServer().ExistsPublisher(cs.Code); !exists {
+					cs.OnlineStatus = false
+					base_service.CameraUpdateById(cs)
+				}
+				continue
+			}
 			if exists := rtmpserver.GetSingleRtmpServer().ExistsPublisher(cs.Code); !exists {
 				cs.OnlineStatus = false
 				base_service.CameraUpdateById(cs)

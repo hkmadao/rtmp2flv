@@ -19,6 +19,7 @@ import (
 
 func main() {
 	go tcpserver.ReverseCommandServer()
+	rtmpserver.GetSingleEncryptRtmpServer().StartRtmpServer()
 	rtmpserver.GetSingleRtmpServer().StartRtmpServer()
 	task.GetSingleTask().StartTask()
 	web.GetSingleWeb().StartWeb()
