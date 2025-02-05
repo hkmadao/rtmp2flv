@@ -24,6 +24,8 @@ type CameraRecordVO struct {
 	StartTime time.Time `json:"startTime"`
 	// 结束时间:
 	EndTime time.Time `json:"endTime"`
+	// 是否有音频:
+	HasAudio bool `json:"hasAudio"`
 	// 摄像头主属性:
 	IdCamera string `json:"idCamera"`
 	// 摄像头:
@@ -34,22 +36,22 @@ type CameraVO struct {
 	Id string `json:"id"`
 	// 编号:
 	Code string `json:"code"`
-	// rtsp地址:
-	RtspUrl string `json:"rtspUrl"`
-	// rtmp推送地址:
-	RtmpUrl string `json:"rtmpUrl"`
+	// rtmp识别码:
+	RtmpAuthCode string `json:"rtmpAuthCode"`
 	// 播放权限码:
 	PlayAuthCode string `json:"playAuthCode"`
 	// 在线状态:
 	OnlineStatus bool `json:"onlineStatus"`
 	// 启用状态:
 	Enabled bool `json:"enabled"`
-	// rtmp推送状态:
-	RtmpPushStatus bool `json:"rtmpPushStatus"`
 	// 保存录像状态:
 	SaveVideo bool `json:"saveVideo"`
 	// 直播状态:
 	Live bool `json:"live"`
 	// 创建时间:
 	Created time.Time `json:"created"`
+	// 加密标志:
+	FgEncrypt bool `json:"fgEncrypt"`
+	// 被动推送rtmp标志
+	FgPassive bool `json:"fgPassive"`
 }

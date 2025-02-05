@@ -12,7 +12,7 @@ func GetCameraRecordDesc() *common.EntityDesc {
 		TableName:   "camera_record",
 		BasePath:    "entity::camera_record",
 	}
-	var idRecordAttributeInfo = &common.AttributeInfo{
+	var idCameraRecordAttributeInfo = &common.AttributeInfo{
 		ColumnName:  "id_camera_record",
 		Name:        "idCameraRecord",
 		DisplayName: "记录id",
@@ -59,7 +59,7 @@ func GetCameraRecordDesc() *common.EntityDesc {
 		Name:        "duration",
 		DisplayName: "文件时长",
 		DataType:    "Integer",
-		ValueType:   "number",
+		ValueType:   "Number",
 	}
 	var startTimeAttributeInfo = &common.AttributeInfo{
 		ColumnName:  "start_time",
@@ -74,6 +74,13 @@ func GetCameraRecordDesc() *common.EntityDesc {
 		DisplayName: "结束时间",
 		DataType:    "DateTime",
 		ValueType:   "DateTime",
+	}
+	var hasAudioAttributeInfo = &common.AttributeInfo{
+		ColumnName:  "has_audio",
+		Name:        "hasAudio",
+		DisplayName: "是否有音频",
+		DataType:    "Boolean",
+		ValueType:   "bool",
 	}
 	var idCameraAttributeInfo = &common.AttributeInfo{
 		ColumnName:                     "id_camera",
@@ -99,7 +106,7 @@ func GetCameraRecordDesc() *common.EntityDesc {
 	}
 	var entityDesc = &common.EntityDesc{
 		EntityInfo:      entityInfo,
-		PkAttributeInfo: idRecordAttributeInfo,
+		PkAttributeInfo: idCameraRecordAttributeInfo,
 		NormalFkIdAttributeInfos: []*common.AttributeInfo{
 			idCameraAttributeInfo,
 		},
@@ -109,7 +116,7 @@ func GetCameraRecordDesc() *common.EntityDesc {
 		NormalChildren:        []*common.AttributeInfo{},
 		NormalOne2OneChildren: []*common.AttributeInfo{},
 		AttributeInfoMap: map[string]*common.AttributeInfo{
-			"idCameraRecord": idRecordAttributeInfo,
+			"idCameraRecord": idCameraRecordAttributeInfo,
 			"created":        createdAttributeInfo,
 			"tempFileName":   tempFileNameAttributeInfo,
 			"fgTemp":         fgTempAttributeInfo,
@@ -118,6 +125,7 @@ func GetCameraRecordDesc() *common.EntityDesc {
 			"duration":       durationAttributeInfo,
 			"startTime":      startTimeAttributeInfo,
 			"endTime":        endTimeAttributeInfo,
+			"hasAudio":       hasAudioAttributeInfo,
 			"idCamera":       idCameraAttributeInfo,
 			"camera":         cameraAttributeInfo,
 		},
