@@ -82,14 +82,14 @@ func (r *encryptRtmpServer) startRtmp() {
 			logs.Error("system painc : %v \nstack : %v", recover_rusult, string(debug.Stack()))
 		}
 	}()
-	secretRtmpPort, err := config.Int("server.rtmp.secret-port")
+	encryptRtmpPort, err := config.Int("server.rtmp.encrypt-port")
 	if err != nil {
-		logs.Error("get rtmp secret-port fail : %v", err)
+		logs.Error("get rtmp encrypt-port fail : %v", err)
 		return
 	}
 	// rtmp.Debug = true
 	s := &rtmp.Server{
-		Addr:       ":" + strconv.Itoa(secretRtmpPort),
+		Addr:       ":" + strconv.Itoa(encryptRtmpPort),
 		HandleConn: r.handleRtmpConn,
 	}
 	s.SetEncryptInfo(rtmp.AES, getClientInfo)
@@ -149,8 +149,8 @@ func (r *encryptRtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 		return
 	}
 
-	if !camera.FgSecret {
-		logs.Error("camera: %s fgSecret is %b", code, camera.FgSecret)
+	if !camera.FgEncrypt {
+		logs.Error("camera: %s fgEncrypt is %b", code, camera.FgEncrypt)
 		return
 	}
 

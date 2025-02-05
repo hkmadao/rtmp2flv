@@ -25,15 +25,17 @@ type CameraVO struct {
 	// 创建时间:
 	Created time.Time `json:"created"`
 	// 加密标志:
-	FgSecret bool `json:"fgSecret"`
-	// 密钥:
-	Secret string `json:"secret"`
+	FgEncrypt bool `json:"fgEncrypt"`
 	// 被动推送rtmp标志
 	FgPassive bool `json:"fgPassive"`
 	// 客户端信息主属性:
 	IdClientInfo string `json:"idClientInfo"`
 	// 客户端信息:
 	ClientInfo ClientInfoVO `vo:"ignore" json:"clientInfo"`
+	// 摄像头记录
+	// CameraRecords []CameraRecordVO `json:"cameraRecords"`
+	// 摄像头分享
+	// CameraShares []CameraShareVO `json:"cameraShares"`
 }
 type ClientInfoVO struct {
 	// 客户端信息主属性

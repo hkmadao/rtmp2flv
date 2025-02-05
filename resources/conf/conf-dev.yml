@@ -1,9 +1,8 @@
 server:
-    user:
-        name: admin
-        password: admin
+    security: true
     rtmp:
         port: 1935
+        encrypt-port: 1936
     http:
         port: 9090
         static:
@@ -18,4 +17,9 @@ server:
         driver: postgres
         url: user=postgres password=123456 dbname=rtmp2flv host=localhost port=5432 sslmode=disable TimeZone=UTC
         show-sql: false
+    token:
+        duration: 1440
+    reverse:
+        command:
+            port: 9089
         

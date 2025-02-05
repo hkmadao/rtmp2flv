@@ -2,7 +2,7 @@ server:
     security: true
     rtmp:
         port: 1935
-        secret-port: 1936
+        encrypt-port: 1936
     http:
         port: 9090
         static:

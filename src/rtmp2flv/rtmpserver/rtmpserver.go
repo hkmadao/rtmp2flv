@@ -131,8 +131,8 @@ func (r *rtmpServer) handleRtmpConn(conn *rtmp.Conn) {
 		return
 	}
 
-	if camera.FgSecret {
-		logs.Error("camera: %s fgSecret is %b", code, camera.FgSecret)
+	if camera.FgEncrypt {
+		logs.Error("camera: %s fgEncrypt is %b", code, camera.FgEncrypt)
 		return
 	}
 

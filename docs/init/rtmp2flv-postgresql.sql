@@ -98,8 +98,7 @@ CREATE TABLE public.camera (
 	live bool NULL, -- 直播状态
 	created timestamp NULL, -- 创建时间
 	id varchar(255) NOT NULL,
-	fg_secret bool NULL DEFAULT false, -- 加密标志
-	secret varchar NULL, -- 密钥
+	fg_encrypt bool NULL DEFAULT false, -- 加密标志
 	fg_passive bool NULL DEFAULT false, -- 被动推送rtmp标志
 	id_client_info varchar NULL,
 	CONSTRAINT pk_camera PRIMARY KEY (id),
@@ -117,8 +116,7 @@ COMMENT ON COLUMN public.camera.enabled IS '启用状态';
 COMMENT ON COLUMN public.camera.save_video IS '保存录像状态';
 COMMENT ON COLUMN public.camera.live IS '直播状态';
 COMMENT ON COLUMN public.camera.created IS '创建时间';
-COMMENT ON COLUMN public.camera.fg_secret IS '加密标志';
-COMMENT ON COLUMN public.camera.secret IS '密钥';
+COMMENT ON COLUMN public.camera.fg_encrypt IS '加密标志';
 COMMENT ON COLUMN public.camera.fg_passive IS '被动推送rtmp标志';
 
 

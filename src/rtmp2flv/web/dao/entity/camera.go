@@ -3,11 +3,10 @@ package entity
 import (
 	"time"
 )
-
 // 摄像头
 type Camera struct {
 	// 摄像头主属性
-	Id string `orm:"pk;column(id)" json:"id"`
+	Id string  `orm:"pk;column(id)" json:"id"`
 	// 编号:
 	Code string `orm:"column(code)" json:"code"`
 	// rtmp识别码:
@@ -25,9 +24,7 @@ type Camera struct {
 	// 创建时间:
 	Created time.Time `orm:"column(created)" json:"created"`
 	// 加密标志:
-	FgSecret bool `orm:"column(fg_secret)" json:"fgSecret"`
-	// 密钥:
-	Secret string `orm:"column(secret)" json:"secret"`
+	FgEncrypt bool `orm:"column(fg_encrypt)" json:"fgEncrypt"`
 	// 被动推送rtmp标志
 	FgPassive bool `orm:"column(fg_passive)" json:"fgPassive"`
 	// 客户端信息主属性:
