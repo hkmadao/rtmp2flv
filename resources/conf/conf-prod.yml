@@ -7,6 +7,10 @@ server:
         port: 9090
         static:
             path: ./resources/static
+        use-https: true
+        cert:
+            private-key-path: ./resources/conf/cert/private_key.pem
+            cert-path: ./resources/conf/cert/certificate.crt
     fileflv:
         path: ./resources/output/live
     log:
