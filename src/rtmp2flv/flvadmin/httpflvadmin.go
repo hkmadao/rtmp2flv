@@ -2,6 +2,7 @@ package flvadmin
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/utils"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/common"
 	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dao/entity"
+	"github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/dto/vo/ext/live"
 	base_service "github.com/hkmadao/rtmp2flv/src/rtmp2flv/web/service/base"
 )
 
@@ -247,4 +249,92 @@ func (hfa *HttpFlvAdmin) TickerCheckStopRtmp() {
 		hfm := value.(*httpflvmanage.HttpFlvManager)
 		go checkStop(cs.Code, hfm)
 	}
+}
+
+type LiveInfoAppResult struct {
+	common.AppResult
+	Data live.LiveMediaInfo `json:"data"`
+}
+
+func (hfa *HttpFlvAdmin) GetLiveInfo(camera entity.Camera) (*live.LiveMediaInfo, error) {
+	liveMediaInfo := &live.LiveMediaInfo{
+		HasAudio:     false,
+		OnlineStatus: false,
+		AnchorName:   camera.Code,
+	}
+	rfw, ok := hfa.hfms.Load(camera.Code)
+	if ok {
+		rfw := rfw.(*httpflvmanage.HttpFlvManager)
+
+		liveMediaInfo.HasAudio = hasAudio(rfw.GetCodecs())
+		liveMediaInfo.OnlineStatus = true
+	}
+
+	if liveMediaInfo.OnlineStatus {
+		return liveMediaInfo, nil
+	}
+
+	if !camera.FgPassive {
+		return liveMediaInfo, nil
+	}
+
+	messageId, err := utils.GenerateId()
+	if err != nil {
+		return nil, common.InternalError(err)
+	}
+
+	messageChan := make(chan *tcpserver.ResMessage)
+	rcm := tcpserver.ReverseCommandMessage{
+		ClientCode:  camera.ClientInfo.ClientCode,
+		MessageType: "getLiveMediaInfo",
+		MessageId:   messageId,
+		Created:     time.Now(),
+		MessageChan: messageChan,
+	}
+	param := RtmpPushParam{CameraCode: camera.Code}
+	paramBytes, err := json.Marshal(param)
+	if err != nil {
+		logs.Error("getLiveMediaInfo: %v", err)
+	}
+	sendReverseCommandErr := tcpserver.SendReverseCommand(camera.ClientInfo.Secret, rcm, string(paramBytes))
+	defer tcpserver.ClearReverseCommand(messageId)
+	if sendReverseCommandErr != nil {
+		logs.Error("getLiveMediaInfo: %v", sendReverseCommandErr)
+		return nil, sendReverseCommandErr
+	}
+	select {
+	case resMessage := <-messageChan:
+		result := common.AppResult{}
+		err := json.Unmarshal(*resMessage.Data, &result)
+		if err != nil {
+			logs.Error("getLiveMediaInfo: %v", err)
+			return liveMediaInfo, common.InternalError(err)
+		}
+		if result.IsFailed() {
+			logs.Error("getLiveMediaInfo failed, message: %v", result)
+			return liveMediaInfo, common.InternalError(fmt.Errorf("getLiveMediaInfo client stop push rtmp failed"))
+		}
+
+		liveInfoAppResult := LiveInfoAppResult{}
+		err = json.Unmarshal(*resMessage.Data, &liveInfoAppResult)
+		if err != nil {
+			logs.Error("getLiveMediaInfo: %v", err)
+			return liveMediaInfo, common.InternalError(err)
+		}
+		liveMediaInfo = &liveInfoAppResult.Data
+	case <-time.NewTicker(1 * time.Minute).C:
+		logs.Error("getLiveMediaInfo read form client time out")
+		return liveMediaInfo, common.InternalError(fmt.Errorf("getLiveMediaInfo read form client time out"))
+	}
+
+	return liveMediaInfo, nil
+}
+
+func hasAudio(streams []av.CodecData) bool {
+	for _, stream := range streams {
+		if stream.Type().IsAudio() {
+			return true
+		}
+	}
+	return false
 }

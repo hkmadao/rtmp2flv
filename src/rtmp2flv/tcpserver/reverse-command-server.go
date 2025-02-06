@@ -23,7 +23,7 @@ type ResMessage struct {
 
 type ReverseCommandMessage struct {
 	ClientCode string
-	// "cameraAq" "historyVideoPage" "flvFileMediaInfo" "flvPlay" "flvFetchMoreData" "startPushRtmp" "stopPushRtmp"
+	// "cameraAq" "historyVideoPage" "flvFileMediaInfo" "flvPlay" "flvFetchMoreData" "startPushRtmp" "stopPushRtmp" "getLiveMediaInfo"
 	MessageType string
 	MessageId   string
 	Created     time.Time
