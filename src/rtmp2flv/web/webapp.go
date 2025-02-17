@@ -115,7 +115,7 @@ func (w *web) webRun() {
 
 	router.POST("/clientCamera/aq/:idClient", ext_controller.ClientCameraAq)
 	router.POST("/clientCameraRecord/aqPage/:idClient", ext_controller.ClientCameraRecordAqPage)
-	router.GET("/clientCameraRecord/getDuration/:idClient/:idCameraRecord", ext_controller.ClientCameraRecordFileDuration)
+	router.GET("/clientCameraRecord/getMediaInfo/:idClient/:idCameraRecord", ext_controller.ClientCameraRecordFileDuration)
 	router.GET("/clientCameraRecord/start/:idClient/:idCameraRecord", ext_controller.ClientCameraRecordFilePlay)
 	router.GET("/clientCameraRecord/fetch/:idClient", ext_controller.ClientCameraRecordFileFetch)
 

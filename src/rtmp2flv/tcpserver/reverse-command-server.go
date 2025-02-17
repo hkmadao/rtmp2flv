@@ -109,6 +109,9 @@ func ReverseCommandServer() {
 }
 
 func handleConn(conn net.Conn) {
+	defer func() {
+		conn.Close()
+	}()
 	// read first message
 	dataLenBytes := make([]byte, 4)
 	_, err := conn.Read(dataLenBytes)
@@ -214,7 +217,6 @@ func handleConn(conn net.Conn) {
 
 func readMessage(secret string, conn net.Conn, vodMessage ReverseCommandMessage) {
 	defer func() {
-		conn.Close()
 		close(vodMessage.MessageChan)
 	}()
 	for {
@@ -227,7 +229,6 @@ func readMessage(secret string, conn net.Conn, vodMessage ReverseCommandMessage)
 
 func readRes(secret string, conn net.Conn, vodMessage ReverseCommandMessage) {
 	defer func() {
-		conn.Close()
 		close(vodMessage.MessageChan)
 	}()
 	readOneMessage(secret, conn, vodMessage)
