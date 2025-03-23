@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"sync"
 	"time"
@@ -77,7 +78,7 @@ func SendReverseCommand(secret string, rcm ReverseCommandMessage, paramStr strin
 
 	_, writeErr := writeCommandMessage(secret, cm, conn)
 	if writeErr != nil {
-		logs.Error("writeCommandMessage error: %v", err)
+		logs.Error("writeCommandMessage error: %v", writeErr)
 		err = common.InternalError(writeErr)
 		return
 	}
@@ -109,8 +110,11 @@ func ReverseCommandServer() {
 }
 
 func handleConn(conn net.Conn) {
+	registerInfo := RegisterInfo{}
 	defer func() {
-		conn.Close()
+		if registerInfo.ConnType != "keepChannel" {
+			conn.Close()
+		}
 	}()
 	// read first message
 	dataLenBytes := make([]byte, 4)
@@ -145,7 +149,6 @@ func handleConn(conn net.Conn) {
 		}
 	}
 
-	registerInfo := RegisterInfo{}
 	err = json.Unmarshal(dataBodyBytes, &registerInfo)
 	if err != nil {
 		logs.Error("Unmarshal RegisterInfo error: %v", err)
@@ -164,16 +167,25 @@ func handleConn(conn net.Conn) {
 		logs.Error("sign: %s error", registerInfo.Sign)
 		return
 	}
-	registerDate, err := time.Parse(time.RFC3339, registerInfo.DateStr)
+
+	// 配置了大于0的时间才做有效期验证
+	clientRangSeconds, err := config.Int64("server.client-rang-seconds")
 	if err != nil {
-		logs.Error("parse register dateStr: %s error: %v", registerInfo.DateStr, err)
+		logs.Error("get server client-rang-seconds error: %v. \n ", err)
 		return
 	}
+	if clientRangSeconds > 0 {
+		registerDate, err := time.Parse(time.RFC3339, registerInfo.DateStr)
+		if err != nil {
+			logs.Error("parse register dateStr: %s error: %v", registerInfo.DateStr, err)
+			return
+		}
 
-	fgExpires := time.Since(registerDate) > 5*time.Minute
-	if fgExpires {
-		logs.Error("dateStr: %s expires", registerInfo.DateStr)
-		return
+		fgExpires := math.Abs(float64(time.Since(registerDate))) > float64(time.Duration(clientRangSeconds)*time.Second)
+		if fgExpires {
+			logs.Error("dateStr: %s expires", registerInfo.DateStr)
+			return
+		}
 	}
 
 	if registerInfo.ConnType == "keepChannel" {

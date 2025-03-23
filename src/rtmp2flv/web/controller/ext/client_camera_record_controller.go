@@ -81,14 +81,6 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 
 	select {
 	case resMessage := <-messageChan:
-		// result := common.AppResult{}
-		// err := json.Unmarshal(resMessage.Data, &result)
-		// if err != nil {
-		// 	logs.Error("result Unmarshal error: %v", err)
-		// 	http.Error(ctx.Writer, "result Unmarshal error", http.StatusInternalServerError)
-		// 	return
-		// }
-		// ctx.JSON(http.StatusOK, result)
 		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
 	case <-time.NewTicker(1 * time.Minute).C:
 		logs.Error("read form client time out")
@@ -282,14 +274,6 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 	}
 	select {
 	case resMessage := <-messageChan:
-		// result := common.AppResult{}
-		// err := json.Unmarshal(resMessage.Data, &result)
-		// if err != nil {
-		// 	logs.Error("result Unmarshal error: %v", err)
-		// 	http.Error(ctx.Writer, "result Unmarshal error", http.StatusInternalServerError)
-		// 	return
-		// }
-		// ctx.JSON(http.StatusOK, result)
 		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
 	case <-time.NewTicker(1 * time.Minute).C:
 		logs.Error("read form client time out")
@@ -345,7 +329,7 @@ func ClientCameraAq(ctx *gin.Context) {
 	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
 	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
-		logs.Error("SendReverseCommand error: %v", err)
+		logs.Error("SendReverseCommand error: %v", sendReverseCommandErr)
 		if !sendReverseCommandErr.IsCustomError() {
 			http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -357,14 +341,6 @@ func ClientCameraAq(ctx *gin.Context) {
 
 	select {
 	case resMessage := <-messageChan:
-		// result := common.AppResult{}
-		// err := json.Unmarshal(resMessage.Data, &result)
-		// if err != nil {
-		// 	logs.Error("result Unmarshal error: %v", err)
-		// 	http.Error(ctx.Writer, "result Unmarshal error", http.StatusInternalServerError)
-		// 	return
-		// }
-		// ctx.JSON(http.StatusOK, result)
 		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
 	case <-time.NewTicker(1 * time.Minute).C:
 		logs.Error("read form client time out")
@@ -434,14 +410,6 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 
 	select {
 	case resMessage := <-messageChan:
-		// result := common.AppResult{}
-		// err := json.Unmarshal(resMessage.Data, &result)
-		// if err != nil {
-		// 	logs.Error("result Unmarshal error: %v", err)
-		// 	http.Error(ctx.Writer, "result Unmarshal error", http.StatusInternalServerError)
-		// 	return
-		// }
-		// ctx.JSON(http.StatusOK, result)
 		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
 	case <-time.NewTicker(1 * time.Minute).C:
 		logs.Error("read form client time out")

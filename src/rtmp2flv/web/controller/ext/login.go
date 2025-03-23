@@ -139,7 +139,11 @@ func TokenValidate() gin.HandlerFunc {
 			ctx.Next()
 			return
 		}
-		if ctx.Request.URL.Path == "/login" || strings.HasPrefix(ctx.Request.URL.Path, "/live/") ||
+		if ctx.Request.URL.Path == "/login" ||
+			strings.HasPrefix(ctx.Request.URL.Path, "/live/") ||
+			strings.HasPrefix(ctx.Request.URL.Path, "/fetchIso8601Time") ||
+			strings.HasPrefix(ctx.Request.URL.Path, "/fetchUnixMillisecondTime") ||
+			strings.HasPrefix(ctx.Request.URL.Path, "/checkTimeRang") ||
 			strings.HasPrefix(ctx.Request.URL.Path, "/rtmp2flv") {
 			ctx.Next()
 			return

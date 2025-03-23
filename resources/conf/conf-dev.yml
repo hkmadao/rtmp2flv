@@ -1,5 +1,6 @@
 server:
     security: true
+    client-rang-seconds: 0
     rtmp:
         port: 1935
         encrypt-port: 1936

@@ -41,6 +41,9 @@ func (w *web) webRun() {
 
 	router.POST("/login", ext_controller.Login)
 	router.POST("/logout", ext_controller.Logout)
+	router.GET("/fetchIso8601Time", ext_controller.FetchIso8601Time)
+	router.GET("/fetchUnixMillisecondTime", ext_controller.FetchUnixMillisecondTime)
+	router.GET("/checkTimeRang", ext_controller.CheckTimeRang)
 
 	router.GET("/live/getMediaInfo/:method/:code/:authCode.flv", ext_controller.HttpFlvPlayMediaInfo)
 	router.GET("/live/:method/:code/:authCode.flv", ext_controller.HttpFlvPlay)
