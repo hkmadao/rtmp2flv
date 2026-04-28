@@ -49,13 +49,17 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan *tcpserver.ResMessage)
+	// 缓冲一次回包，避免 HTTP 超时后 TCP 读协程卡在发送上。
+	messageChan := make(chan *tcpserver.ResMessage, 1)
+	done := make(chan struct{})
+	defer close(done)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvFileMediaInfo",
 		MessageId:   messageId,
 		Created:     time.Now(),
 		MessageChan: messageChan,
+		Done:        done,
 	}
 	param := FlvFileMediaInfoParam{
 		IdCameraRecord: idCameraRecord,
@@ -66,7 +70,7 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, &rcm, string(paramBytes))
 	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
@@ -79,11 +83,16 @@ func ClientCameraRecordFileDuration(ctx *gin.Context) {
 		return
 	}
 
+	// 使用可停止的 timer，避免 NewTicker 留下不必要的计时资源。
+	timer := time.NewTimer(1 * time.Minute)
+	defer timer.Stop()
 	select {
 	case resMessage := <-messageChan:
 		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
-	case <-time.NewTicker(1 * time.Minute).C:
+	case <-timer.C:
 		logs.Error("read form client time out")
+	case <-ctx.Request.Context().Done():
+		logs.Error("client request canceled")
 	}
 }
 
@@ -143,13 +152,17 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 		return
 	}
 
+	// 播放链路会持续传输分片，保留无缓冲通道做背压，通过 Done 处理取消。
 	messageChan := make(chan *tcpserver.ResMessage)
+	done := make(chan struct{})
+	defer close(done)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvPlay",
 		MessageId:   messageId,
 		Created:     time.Now(),
 		MessageChan: messageChan,
+		Done:        done,
 	}
 	param := PlayParam{
 		IdCameraRecord: idCameraRecord,
@@ -162,7 +175,7 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, &rcm, string(paramBytes))
 	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
@@ -173,6 +186,9 @@ func ClientCameraRecordFilePlay(ctx *gin.Context) {
 		http.Error(ctx.Writer, sendReverseCommandErr.Error(), http.StatusInternalServerError)
 		return
 	}
+	// 每收到一个分片就重置空闲计时；超时或 HTTP 取消会触发 TCP 读协程退出。
+	idleTimer := time.NewTimer(1 * time.Minute)
+	defer idleTimer.Stop()
 Loop:
 	for {
 		select {
@@ -187,8 +203,18 @@ Loop:
 				logs.Error("ctx write error: %v", err)
 				break Loop
 			}
-		case <-time.NewTicker(1 * time.Minute).C:
+			if !idleTimer.Stop() {
+				select {
+				case <-idleTimer.C:
+				default:
+				}
+			}
+			idleTimer.Reset(1 * time.Minute)
+		case <-idleTimer.C:
 			logs.Error("read form client time out")
+			break Loop
+		case <-ctx.Request.Context().Done():
+			logs.Error("client request canceled")
 			break Loop
 		}
 	}
@@ -242,13 +268,17 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan *tcpserver.ResMessage)
+	// 缓冲一次回包，避免客户端迟到响应导致 TCP 读协程滞留。
+	messageChan := make(chan *tcpserver.ResMessage, 1)
+	done := make(chan struct{})
+	defer close(done)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "flvFetchMoreData",
 		MessageId:   messageId,
 		Created:     time.Now(),
 		MessageChan: messageChan,
+		Done:        done,
 	}
 	param := FetchMoreDataParam{
 		PlayerId:   playerId,
@@ -260,7 +290,7 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, &rcm, string(paramBytes))
 	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
@@ -272,11 +302,16 @@ func ClientCameraRecordFileFetch(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, result)
 		return
 	}
+	// 函数返回时停止 timer，避免频繁 fetch 时累计 ticker。
+	timer := time.NewTimer(1 * time.Minute)
+	defer timer.Stop()
 	select {
 	case resMessage := <-messageChan:
 		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
-	case <-time.NewTicker(1 * time.Minute).C:
+	case <-timer.C:
 		logs.Error("read form client time out")
+	case <-ctx.Request.Context().Done():
+		logs.Error("client request canceled")
 	}
 }
 
@@ -311,13 +346,17 @@ func ClientCameraAq(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan *tcpserver.ResMessage)
+	// 缓冲一次回包，避免摄像头查询取消后阻塞 TCP 读协程。
+	messageChan := make(chan *tcpserver.ResMessage, 1)
+	done := make(chan struct{})
+	defer close(done)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "cameraAq",
 		MessageId:   messageId,
 		Created:     time.Now(),
 		MessageChan: messageChan,
+		Done:        done,
 	}
 
 	paramBytes, err := json.Marshal(condition)
@@ -326,7 +365,7 @@ func ClientCameraAq(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, &rcm, string(paramBytes))
 	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", sendReverseCommandErr)
@@ -339,11 +378,16 @@ func ClientCameraAq(ctx *gin.Context) {
 		return
 	}
 
+	// HTTP 请求取消时会关闭 Done，让 TCP 读协程退出。
+	timer := time.NewTimer(1 * time.Minute)
+	defer timer.Stop()
 	select {
 	case resMessage := <-messageChan:
 		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
-	case <-time.NewTicker(1 * time.Minute).C:
+	case <-timer.C:
 		logs.Error("read form client time out")
+	case <-ctx.Request.Context().Done():
+		logs.Error("client request canceled")
 	}
 }
 
@@ -380,13 +424,17 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		return
 	}
 
-	messageChan := make(chan *tcpserver.ResMessage)
+	// 缓冲一次回包，避免历史录像查询取消后阻塞 TCP 读协程。
+	messageChan := make(chan *tcpserver.ResMessage, 1)
+	done := make(chan struct{})
+	defer close(done)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  clientInfo.ClientCode,
 		MessageType: "historyVideoPage",
 		MessageId:   messageId,
 		Created:     time.Now(),
 		MessageChan: messageChan,
+		Done:        done,
 	}
 
 	paramBytes, err := json.Marshal(pageInfoInput)
@@ -395,7 +443,7 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		http.Error(ctx.Writer, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, rcm, string(paramBytes))
+	sendReverseCommandErr := tcpserver.SendReverseCommand(clientInfo.Secret, &rcm, string(paramBytes))
 	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("SendReverseCommand error: %v", err)
@@ -408,10 +456,15 @@ func ClientCameraRecordAqPage(ctx *gin.Context) {
 		return
 	}
 
+	// HTTP 请求取消时会关闭 Done，让 TCP 读协程退出。
+	timer := time.NewTimer(1 * time.Minute)
+	defer timer.Stop()
 	select {
 	case resMessage := <-messageChan:
 		ctx.Data(http.StatusOK, gin.MIMEJSON, *resMessage.Data)
-	case <-time.NewTicker(1 * time.Minute).C:
+	case <-timer.C:
 		logs.Error("read form client time out")
+	case <-ctx.Request.Context().Done():
+		logs.Error("client request canceled")
 	}
 }

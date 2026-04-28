@@ -97,20 +97,24 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 			return nil, common.InternalError(err)
 		}
 		param := RtmpPushParam{CameraCode: camera.Code}
-		messageChan := make(chan *tcpserver.ResMessage)
+		// 缓冲一次命令回包，避免超时清理后阻塞 TCP 读协程。
+		messageChan := make(chan *tcpserver.ResMessage, 1)
+		done := make(chan struct{})
+		defer close(done)
 		rcm := tcpserver.ReverseCommandMessage{
 			ClientCode:  camera.ClientInfo.ClientCode,
 			MessageType: "startPushRtmp",
 			MessageId:   messageId,
 			Created:     time.Now(),
 			MessageChan: messageChan,
+			Done:        done,
 		}
 
 		paramBytes, err := json.Marshal(param)
 		if err != nil {
 			return nil, common.InternalError(err)
 		}
-		sendReverseCommandErr := tcpserver.SendReverseCommand(camera.ClientInfo.Secret, rcm, string(paramBytes))
+		sendReverseCommandErr := tcpserver.SendReverseCommand(camera.ClientInfo.Secret, &rcm, string(paramBytes))
 		defer tcpserver.ClearReverseCommand(messageId)
 		if sendReverseCommandErr != nil {
 			logs.Error("SendReverseCommand error: %v", sendReverseCommandErr)
@@ -121,6 +125,9 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 			return nil, sendReverseCommandErr
 		}
 
+		// 使用可停止的 timer；被动播放路径可能被频繁触发。
+		timer := time.NewTimer(1 * time.Minute)
+		defer timer.Stop()
 		select {
 		case resMessage := <-messageChan:
 			result := common.AppResult{}
@@ -133,7 +140,8 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 			}
 			count := 0
 			for {
-				<-time.NewTicker(1 * time.Second).C
+				// 客户端接收命令后还需要一点时间建立 RTMP 推流连接。
+				time.Sleep(1 * time.Second)
 				count++
 				v, b := hfa.hfms.Load(camera.Code)
 				if b {
@@ -149,7 +157,7 @@ func (hfa *HttpFlvAdmin) AddHttpFlvPlayer(
 					return nil, common.CustomError("client start push rtmp success, but the server not found rtmp connection")
 				}
 			}
-		case <-time.NewTicker(1 * time.Minute).C:
+		case <-timer.C:
 			return nil, common.CustomError("read form client time out")
 		}
 	}
@@ -167,7 +175,8 @@ func checkStop(cameraCode string, hfm *httpflvmanage.HttpFlvManager) {
 	// first check
 	existsPlayer := hfm.IsCameraExistsPlayer()
 	if !existsPlayer {
-		<-time.NewTicker(1 * time.Minute).C
+		// 延迟发送停止命令，避免多个观众切换时反复启停被动摄像头。
+		time.Sleep(1 * time.Minute)
 		// sencod check
 		existsPlayer = hfm.IsCameraExistsPlayer()
 		if !existsPlayer {
@@ -187,25 +196,32 @@ func checkStop(cameraCode string, hfm *httpflvmanage.HttpFlvManager) {
 			if err != nil {
 				logs.Error("TickerCheckStopRtmp: %v", err)
 			}
-			messageChan := make(chan *tcpserver.ResMessage)
+			// 缓冲一次停止命令回包，避免超时清理后阻塞 TCP 读协程。
+			messageChan := make(chan *tcpserver.ResMessage, 1)
+			done := make(chan struct{})
+			defer close(done)
 			rcm := tcpserver.ReverseCommandMessage{
 				ClientCode:  camera.ClientInfo.ClientCode,
 				MessageType: "stopPushRtmp",
 				MessageId:   messageId,
 				Created:     time.Now(),
 				MessageChan: messageChan,
+				Done:        done,
 			}
 			param := RtmpPushParam{CameraCode: camera.Code}
 			paramBytes, err := json.Marshal(param)
 			if err != nil {
 				logs.Error("TickerCheckStopRtmp: %v", err)
 			}
-			sendReverseCommandErr := tcpserver.SendReverseCommand(camera.ClientInfo.Secret, rcm, string(paramBytes))
+			sendReverseCommandErr := tcpserver.SendReverseCommand(camera.ClientInfo.Secret, &rcm, string(paramBytes))
 			defer tcpserver.ClearReverseCommand(messageId)
 			if sendReverseCommandErr != nil {
 				logs.Error("TickerCheckStopRtmp: %v", sendReverseCommandErr)
 				return
 			}
+			// 函数返回时停止 timer，避免周期检查累计 ticker。
+			timer := time.NewTimer(1 * time.Minute)
+			defer timer.Stop()
 			select {
 			case resMessage := <-messageChan:
 				result := common.AppResult{}
@@ -218,7 +234,7 @@ func checkStop(cameraCode string, hfm *httpflvmanage.HttpFlvManager) {
 					logs.Error("TickerCheckStopRtmp client stop push rtmp failed")
 					return
 				}
-			case <-time.NewTicker(1 * time.Minute).C:
+			case <-timer.C:
 				logs.Error("TickerCheckStopRtmp read form client time out")
 				return
 			}
@@ -283,25 +299,32 @@ func (hfa *HttpFlvAdmin) GetLiveInfo(camera entity.Camera) (*live.LiveMediaInfo,
 		return nil, common.InternalError(err)
 	}
 
-	messageChan := make(chan *tcpserver.ResMessage)
+	// 缓冲一次媒体信息回包，避免超时清理后阻塞 TCP 读协程。
+	messageChan := make(chan *tcpserver.ResMessage, 1)
+	done := make(chan struct{})
+	defer close(done)
 	rcm := tcpserver.ReverseCommandMessage{
 		ClientCode:  camera.ClientInfo.ClientCode,
 		MessageType: "getLiveMediaInfo",
 		MessageId:   messageId,
 		Created:     time.Now(),
 		MessageChan: messageChan,
+		Done:        done,
 	}
 	param := RtmpPushParam{CameraCode: camera.Code}
 	paramBytes, err := json.Marshal(param)
 	if err != nil {
 		logs.Error("getLiveMediaInfo: %v", err)
 	}
-	sendReverseCommandErr := tcpserver.SendReverseCommand(camera.ClientInfo.Secret, rcm, string(paramBytes))
+	sendReverseCommandErr := tcpserver.SendReverseCommand(camera.ClientInfo.Secret, &rcm, string(paramBytes))
 	defer tcpserver.ClearReverseCommand(messageId)
 	if sendReverseCommandErr != nil {
 		logs.Error("getLiveMediaInfo: %v", sendReverseCommandErr)
 		return nil, sendReverseCommandErr
 	}
+	// 函数返回时停止 timer，避免媒体信息探测累计 ticker。
+	timer := time.NewTimer(1 * time.Minute)
+	defer timer.Stop()
 	select {
 	case resMessage := <-messageChan:
 		result := common.AppResult{}
@@ -322,7 +345,7 @@ func (hfa *HttpFlvAdmin) GetLiveInfo(camera entity.Camera) (*live.LiveMediaInfo,
 			return liveMediaInfo, common.InternalError(err)
 		}
 		liveMediaInfo = &liveInfoAppResult.Data
-	case <-time.NewTicker(1 * time.Minute).C:
+	case <-timer.C:
 		logs.Error("getLiveMediaInfo read form client time out")
 		return liveMediaInfo, common.InternalError(fmt.Errorf("getLiveMediaInfo read form client time out"))
 	}

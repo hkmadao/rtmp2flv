@@ -29,7 +29,12 @@ type ReverseCommandMessage struct {
 	MessageId   string
 	Created     time.Time
 	MessageChan chan<- *ResMessage
-	conn        net.Conn
+	// HTTP 请求超时或断开时关闭 Done，用来通知 TCP 读协程退出。
+	Done <-chan struct{}
+	// 每个命令对应的回包连接，挂在共享对象上，便于清理时关闭。
+	conn   net.Conn
+	mutex  sync.Mutex
+	closed bool
 }
 
 var reverseCommandClientMap sync.Map
@@ -43,16 +48,58 @@ func ClearReverseCommand(messageId string) (err error) {
 		return
 	}
 
-	vodMessage := value.(ReverseCommandMessage)
-
-	if vodMessage.conn != nil {
-		vodMessage.conn.Close()
-	}
+	// 删除命令后关闭回包连接，让正在读 TCP 的协程尽快退出。
+	vodMessage := value.(*ReverseCommandMessage)
+	vodMessage.CloseConn()
 
 	return
 }
 
-func SendReverseCommand(secret string, rcm ReverseCommandMessage, paramStr string) (err *common.Rtmp2FlvCustomError) {
+// SetConn 在 HTTP 侧已经清理命令时返回 false。
+func (rcm *ReverseCommandMessage) SetConn(conn net.Conn) bool {
+	rcm.mutex.Lock()
+	defer rcm.mutex.Unlock()
+	if rcm.closed {
+		return false
+	}
+	rcm.conn = conn
+	return true
+}
+
+// CloseConn 需要幂等，超时、取消和 TCP 退出可能同时发生。
+func (rcm *ReverseCommandMessage) CloseConn() {
+	rcm.mutex.Lock()
+	if rcm.closed {
+		rcm.mutex.Unlock()
+		return
+	}
+	rcm.closed = true
+	conn := rcm.conn
+	rcm.mutex.Unlock()
+
+	if conn != nil {
+		err := conn.Close()
+		if err != nil {
+			logs.Error("close reverse command conn error: %v", err)
+		}
+	}
+}
+
+// Send 在 HTTP 请求已经结束时直接退出，避免阻塞发送。
+func (rcm *ReverseCommandMessage) Send(resMessage *ResMessage) bool {
+	if rcm.Done == nil {
+		rcm.MessageChan <- resMessage
+		return true
+	}
+	select {
+	case rcm.MessageChan <- resMessage:
+		return true
+	case <-rcm.Done:
+		return false
+	}
+}
+
+func SendReverseCommand(secret string, rcm *ReverseCommandMessage, paramStr string) (err *common.Rtmp2FlvCustomError) {
 	_, ok := reverseCommandMessageMap.Load(rcm.MessageId)
 	if ok {
 		logs.Error("MessageId: %s exists", rcm.MessageId)
@@ -60,6 +107,7 @@ func SendReverseCommand(secret string, rcm ReverseCommandMessage, paramStr strin
 		err = common.CustomError(errStr)
 		return
 	}
+	// 保存原始指针，让 handleConn 和 ClearReverseCommand 共享 conn/closed 状态。
 	reverseCommandMessageMap.Store(rcm.MessageId, rcm)
 
 	value, ok := reverseCommandClientMap.Load(rcm.ClientCode)
@@ -210,8 +258,12 @@ func handleConn(conn net.Conn) {
 			logs.Error("messageId: %s channel not found", registerInfo.MessageId)
 			return
 		}
-		vodMessage := value.(ReverseCommandMessage)
-		vodMessage.conn = conn
+		vodMessage := value.(*ReverseCommandMessage)
+		// 将客户端回包连接绑定到命令，后续由 HTTP 侧统一清理。
+		if !vodMessage.SetConn(conn) {
+			logs.Error("messageId: %s is closed", registerInfo.MessageId)
+			return
+		}
 
 		readMessage(clientInfo.Secret, conn, vodMessage)
 	} else {
@@ -220,14 +272,18 @@ func handleConn(conn net.Conn) {
 			logs.Error("messageId: %s channel not found", registerInfo.MessageId)
 			return
 		}
-		vodMessage := value.(ReverseCommandMessage)
-		vodMessage.conn = conn
+		vodMessage := value.(*ReverseCommandMessage)
+		// 将一次性回包连接绑定到命令，超时或取消时可以关闭连接。
+		if !vodMessage.SetConn(conn) {
+			logs.Error("messageId: %s is closed", registerInfo.MessageId)
+			return
+		}
 
 		readRes(clientInfo.Secret, conn, vodMessage)
 	}
 }
 
-func readMessage(secret string, conn net.Conn, vodMessage ReverseCommandMessage) {
+func readMessage(secret string, conn net.Conn, vodMessage *ReverseCommandMessage) {
 	defer func() {
 		close(vodMessage.MessageChan)
 	}()
@@ -239,14 +295,14 @@ func readMessage(secret string, conn net.Conn, vodMessage ReverseCommandMessage)
 	}
 }
 
-func readRes(secret string, conn net.Conn, vodMessage ReverseCommandMessage) {
+func readRes(secret string, conn net.Conn, vodMessage *ReverseCommandMessage) {
 	defer func() {
 		close(vodMessage.MessageChan)
 	}()
 	readOneMessage(secret, conn, vodMessage)
 }
 
-func readOneMessage(secret string, conn net.Conn, vodMessage ReverseCommandMessage) bool {
+func readOneMessage(secret string, conn net.Conn, vodMessage *ReverseCommandMessage) bool {
 	dataLenBytes := make([]byte, 4)
 	_, err := conn.Read(dataLenBytes)
 	if err != nil {
@@ -285,6 +341,6 @@ func readOneMessage(secret string, conn net.Conn, vodMessage ReverseCommandMessa
 		Data:      &plainBytes,
 	}
 
-	vodMessage.MessageChan <- &resMessage
-	return false
+	// 如果 HTTP 请求已结束，不要让 TCP 读协程卡在发送结果上。
+	return !vodMessage.Send(&resMessage)
 }
