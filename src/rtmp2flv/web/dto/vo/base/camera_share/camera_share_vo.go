@@ -44,4 +44,6 @@ type CameraVO struct {
 	Live bool `json:"live"`
 	// 创建时间:
 	Created time.Time `json:"created"`
+	// 客户端信息主属性:
+	IdClientInfo string `json:"idClientInfo"`
 }

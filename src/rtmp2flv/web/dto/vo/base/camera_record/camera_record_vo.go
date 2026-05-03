@@ -54,4 +54,6 @@ type CameraVO struct {
 	FgEncrypt bool `json:"fgEncrypt"`
 	// 被动推送rtmp标志
 	FgPassive bool `json:"fgPassive"`
+	// 客户端信息主属性:
+	IdClientInfo string `json:"idClientInfo"`
 }
